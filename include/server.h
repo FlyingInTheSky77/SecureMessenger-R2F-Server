@@ -57,6 +57,7 @@ private:
     void readMessageToServer( const QJsonObject& obj, QTcpSocket* clientSocket );
     void letsSeeWhatWeGotFromClient( const QJsonObject& obj, QTcpSocket* clientSocket );
     bool isClientConnect( QTcpSocket *socket );
+    void sendToAllClientsChangesInClients( const QJsonObject& changes, QTcpSocket *ignore_socket );
 
     void calculateAndSetInClientMap( int intermediat_number_from_client, QTcpSocket *socket );
     int getSessionKeyBySocketFromMap( QTcpSocket *socket );

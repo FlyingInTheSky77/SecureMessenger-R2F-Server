@@ -1,5 +1,12 @@
 #include "include/Database.h"
 
+#include <QSqlDatabase>
+#include <QSqlError>
+#include <QSqlQuery>
+#include <QSqlQueryModel>
+
+#include <optional>
+
 static void connectToDatabase()
 {
     QSqlDatabase m_R2FSqlDatabase;
@@ -45,7 +52,7 @@ int Database::getCount()
     int numbers{};
     if ( query.next() )
     {
-        numbers = query.value(0).toInt();
+        numbers = query.value( 0 ).toInt();
         return numbers;
     }
     return 0;
@@ -63,7 +70,7 @@ bool Database::checkUser( const QString &login )
     }
     qDebug() << __FILE__ << __LINE__ << "User verified successfully";
     query.next();
-    return query.value(0).toInt();
+    return query.value( 0 ).toInt();
 }
 
 bool Database::registration( const QString &login, const QString& pass, QString& result_in_text )
@@ -76,7 +83,7 @@ bool Database::registration( const QString &login, const QString& pass, QString&
         return false;
     }
 
-    if( !query.exec( INSERT_USER.arg( QString::number( getCount() + 1 ) ).arg( login ).arg( pass ).arg( true ) ) )
+    if( !query.exec( INSERT_USER.arg( QString::number( getCount() + 1 ) ).arg( login ).arg( pass ).arg( false ) ) )
     {
         result_in_text = QIODevice::tr( "User adding error" );
         return false;
@@ -101,8 +108,9 @@ bool Database::authorization(const QString &login, const QString &pass, QString&
         result_in_text = QIODevice::tr( "There are no clients with this login, the user is not authorized" );
         return false;
     }
-    if ( query.value(0).toString() == pass )
+    if ( query.value( 0 ).toString() == pass )
     {
+        setActivityStatus( login, true);
         result_in_text = QIODevice::tr( "User is successfully authorized" );
         return true;
     }
@@ -110,42 +118,31 @@ bool Database::authorization(const QString &login, const QString &pass, QString&
     return false;
 }
 
-QJsonObject Database::getJSoncontact()
-{
-    QSqlQuery queryLogin;
-    queryLogin.exec( GET_ALL_USERS_LOGIN );
-    QSqlQuery queryAStatus;
-    queryAStatus.exec( GET_ALL_USERS_STATUS );
-    QSqlQuery queryID;
-    queryID.exec( GET_ALL_USERS_ID );
-    int i{};
-    QJsonObject Contactlist;
-    while ( queryLogin.next(), queryAStatus.next() )
-    {
-        QJsonObject NumberLoginAndStatus;
-        NumberLoginAndStatus[ "login" ] = queryLogin.value(0).toString();
-        NumberLoginAndStatus[ "activityStatus" ] = queryAStatus.value(0).toString();
-        Contactlist[QString::number( i )] = NumberLoginAndStatus;
-        i++;
-    }
-    return Contactlist;
-}
-
 bool Database::setActivityStatus( const QString& user, bool status )
 {
-    QSqlQuery queryLogin;
-    queryLogin.exec( GET_ALL_USERS_LOGIN );
-    QSqlQuery queryStatus;
-    queryStatus.exec( GET_ALL_USERS_STATUS );
-    while ( queryLogin.next(), queryStatus.next() )
+    QSqlQuery query;
+    query.prepare("UPDATE users SET activitystatus = :activitystatus WHERE login = :user ");
+    query.bindValue( ":user", user );
+    query.bindValue( ":activitystatus", status );
+    if ( !query.exec() )
     {
-        if ( queryLogin.value( 0 ).toString() == user )
-        {
-            queryStatus.value( 0 ) = status;
-            return true;
-        }
+        qDebug() << __FILE__ << __LINE__ << "Error QSqlQuery: " + query.lastError().text();
+        return false;
     }
-    return false;
+    return true;
+}
+
+bool Database::setActivityStatusAllUsersToFalse()
+{
+    QSqlQuery query;
+    query.prepare( "UPDATE users SET activitystatus = :activitystatus" );
+    query.bindValue( ":activitystatus", false );
+    if ( !query.exec() )
+    {
+        qDebug() << __FILE__ << __LINE__ << "Error QSqlQuery: error set activity status all users to false because the server has shut down";
+        return false;
+    }
+    return true;
 }
 
 std::optional< bool> Database::getActivityStatus( const QString& user )
@@ -155,12 +152,22 @@ std::optional< bool> Database::getActivityStatus( const QString& user )
     QSqlQuery queryStatus;
     queryStatus.exec( GET_ALL_USERS_STATUS );
 
-    QMap< QString, bool> status_map;
-    while ( queryLogin.next(), queryStatus.next() )
+    QSqlQuery query;
+    query.prepare("SELECT users.login, users.activitystatus FROM users "
+                  "WHERE users.login = :name");
+    query.bindValue(":name", user);
+    query.exec();
+    bool status{false};
+    while (query.next())
     {
-        if ( queryLogin.value( 0 ).toString() == user )
-            return queryStatus.value( 0 ).toBool();
+        status = query.value(0).toBool();//0 or 1
     }
+
+    if (query.lastError().isValid())
+    {
+       return "There are problems with the database or communication with it";
+    }
+
     qDebug() << __FILE__ << __LINE__ << "Error: get activity status from database";
     return std::nullopt;
 }
