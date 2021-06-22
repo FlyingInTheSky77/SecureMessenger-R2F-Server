@@ -1,15 +1,16 @@
 #include "include/server.h"
 #include "include/Database.h"
+
 #include <memory>
 
 Server::Server()
     : QObject()
-    , tcpServer_ { std::make_unique< QTcpServer >() }
+    , tcpServer_{ std::make_unique< QTcpServer >() }
 {}
 
 QList< QTcpSocket * > Server::getClients()
 {
-    QList< QTcpSocket * > clients_list;
+    QList< QTcpSocket* > clients_list;
     foreach( auto item, clients_ )
     {
         clients_list << item.socket;
@@ -37,13 +38,14 @@ void Server::disconnectSockets()
         disconnect( item.socket, &QTcpSocket::disconnected, this, &Server::gotDisconnection );
     }
     clients_.clear();
+    myDatabase_.setActivityStatusAllUsersToFalse();
 }
 
 void Server::readClient()
 {
     QTcpSocket *clientSocket{ static_cast< QTcpSocket* >( sender() ) };
     QJsonParseError parseError;
-    parseError.error =  QJsonParseError::NoError;
+    parseError.error = QJsonParseError::NoError;
     const QJsonDocument doc{ QJsonDocument::fromJson( clientSocket->readAll(), &parseError ) };
     if ( parseError.error )
     {
@@ -157,9 +159,9 @@ void Server::registrationRequest( const QJsonObject& obj, QTcpSocket* clientSock
     QString registration_result_in_text;
     if ( myDatabase_.registration( login, pass_hashed_in_QString, registration_result_in_text ) )
     {
+
         registration_result_in_text = login + tr( "success registration. You are in system");
         emit gotNewMesssage( tr( "registration was successful" ) );
-        myDatabase_.setActivityStatus( login, 1 );
         sendToClient( clientSocket, Server_Code::registration_successful, { { "message", registration_result_in_text } } );
         return;
     }
@@ -184,9 +186,10 @@ void Server::authorizationRequest( const QJsonObject& obj, QTcpSocket *clientSoc
             sendToClient( clientSocket, Server_Code::authorization_failed, { { "message", authorization_result_in_text } } );
             return;
         }
-        myDatabase_.setActivityStatus( login, 1 );
+        myDatabase_.setActivityStatus( login, true );
         sendToClient( clientSocket, Server_Code::authorization_successful, { { "message", authorization_result_in_text } } );
         emit gotNewMesssage( authorization_result_in_text + tr( ". user with login " ) + login + tr( " in system now" ) );
+        sendToAllClientsChangesInClients( {{login,true}}, clientSocket );
         return;
     }
     emit gotNewMesssage( authorization_result_in_text );
@@ -259,9 +262,7 @@ int Server::forwardMessageToRecipient( const QString& recipient, const QJsonObje
     for ( int i = 0; i < size_map; i++ )
     {
         if ( clients_[i].name == recipient )
-        {
             return sendToClient( clients_[i].socket, Server_Code::message_to_recipient, new_message_obj );
-        }
     }
     return 0;
 }
@@ -283,9 +284,7 @@ int Server::findNumberBySocket( QTcpSocket* current_socket )
     for ( int i = 0; i < size_map; i++ )
     {
         if ( clients_[i].socket == current_socket)
-        {
             return i;
-        }
     }
     return -1;
 }
@@ -331,9 +330,7 @@ QByteArray Server::cryptQByteArray ( const QByteArray& jByte, int key )
         item = item ^ key_in_vector[index];
         index++;
         if ( index == vector_size )
-        {
             index = 0;
-        }
         jByte_after_crypt.append( item );
     }
     return jByte_after_crypt;
@@ -392,4 +389,15 @@ bool Server::isClientConnect( QTcpSocket *socket )
             return true;
     }
     return false;
+}
+
+void Server::sendToAllClientsChangesInClients( const QJsonObject& changes, QTcpSocket *ignore_socket )
+{
+    for (const auto& item: clients_)
+    {
+        //we don't send the changed status to the client whose status has changed
+        if ( item.socket == ignore_socket )
+            continue;
+        sendToClient( item.socket, Server_Code::changes_in_contact_list, changes);
+    }
 }

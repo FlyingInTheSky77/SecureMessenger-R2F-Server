@@ -12,11 +12,13 @@ enum class Server_Code
 
     message_to_recipient,
     contacts_list,
-    recipient_offline,
+    recipient_offline,    
 
     secure_session_server_step,
 
-    mistake
+    mistake,
+
+    changes_in_contact_list
 };
 
 enum class Client_Code
@@ -30,5 +32,7 @@ enum class Client_Code
 
     secure_session_client_step,
 
-    mistake
+    mistake,
+
+    changes_in_contact_lists
 };
