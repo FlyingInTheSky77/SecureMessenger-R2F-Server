@@ -147,53 +147,74 @@ void Server::readAndForwardMessageToRecipient( const QJsonObject& obj, QTcpSocke
 
 void Server::registrationRequest( const QJsonObject& obj, QTcpSocket* clientSocket )
 {
-    const QString encrypt_obj_inQString{ obj.value( "object" ).toString() };
-    const QJsonObject decrypt_object{ decryptQJsonObjFromEncryptQString( encrypt_obj_inQString, clientSocket ) };
-    const QString login{ decrypt_object.value( "login" ).toString() };
-    const QString password{ decrypt_object.value( "password" ).toString() };
-    const QByteArray passwor_int_QByteArray{ password.toUtf8() };
-    const QByteArray hash_of_password_for_database{ QCryptographicHash::hash( passwor_int_QByteArray, QCryptographicHash::Sha1 ) };
-    const std::string pass_std{ hash_of_password_for_database.toStdString() };
-    const QString pass_hashed_in_QString{ QString::fromUtf8( pass_std.c_str() ) };
+    auto credentials = getCredentials(obj, clientSocket);
+    const QString login = credentials.first;
+    const QString hashed_password = credentials.second;
 
-    QString registration_result_in_text;
-    if ( myDatabase_.registration( login, pass_hashed_in_QString, registration_result_in_text ) )
+    QString registration_result;
+    Server_Code code;
+
+    if ( myDatabase_.registration( login, hashed_password, registration_result ) )
     {
-
-        registration_result_in_text = login + tr( "success registration. You are in system");
-        emit gotNewMesssage( tr( "registration was successful" ) );
-        sendToClient( clientSocket, Server_Code::registration_successful, { { "message", registration_result_in_text } } );
-        return;
+        code = Server_Code::registration_successful;
     }
-    emit gotNewMesssage( tr( "registration with login" ) + login + tr( "was faild: " ) + registration_result_in_text );
-    sendToClient( clientSocket, Server_Code::registration_successful, { { "message", registration_result_in_text } } );
+    else
+    {
+        code = Server_Code::registration_failed;
+    }
+    emit gotNewMesssage( tr( "result of registration with login" ) + login + registration_result );
+    sendToClient( clientSocket, code, { { "message", registration_result } } );
 }
 
 void Server::authorizationRequest( const QJsonObject& obj, QTcpSocket *clientSocket )
 {
-    const QString encrypt_obj_inQString{ obj.value( "object" ).toString() };
-    const QJsonObject decrypt_object{ decryptQJsonObjFromEncryptQString( encrypt_obj_inQString, clientSocket ) };
-    const QString login{ decrypt_object.value( "login" ).toString() };
-    const QString password{ decrypt_object.value( "password" ).toString() };
-    const QByteArray passwor_int_QByteArray{ password.toUtf8() };
-    const QByteArray hash_of_password_for_database{ QCryptographicHash::hash( passwor_int_QByteArray, QCryptographicHash::Sha1 ) };
+    auto credentials = getCredentials(obj, clientSocket);
+    const QString login = credentials.first;
+    const QString hashed_password = credentials.second;
+
+    Server_Code code;
     QString authorization_result_in_text;
-    if ( myDatabase_.authorization( login, hash_of_password_for_database, authorization_result_in_text ) )
+
+    if ( myDatabase_.authorization( login, hashed_password, authorization_result_in_text ) )
     {
-        if ( !writeDownConnectedClientName( login, clientSocket ) )
+        if ( writeDownConnectedClientName( login, clientSocket ) )
         {
-            authorization_result_in_text += "\n,"+ tr( "but any way - UPS!!! - we got client-named saving mistake." );
-            sendToClient( clientSocket, Server_Code::authorization_failed, { { "message", authorization_result_in_text } } );
-            return;
+            code = Server_Code::authorization_successful;
+            sendToAllClientsChangesInClients( {{login,true}}, clientSocket );
+            //authorization_result_in_text += "\n,"+ tr( "but any way - UPS!!! - we got client-named saving mistake." );
+            //sendToClient( clientSocket, Server_Code::authorization_failed, { { "message", authorization_result_in_text } } );
+            //return;
         }
-        myDatabase_.setActivityStatus( login, true );
+        else
+        {
+            code = Server_Code::authorization_failed;
+            // in this case, it's necessary to user reconnect to server, not just relogging
+            // we should tell this to client
+        }
         sendToClient( clientSocket, Server_Code::authorization_successful, { { "message", authorization_result_in_text } } );
         emit gotNewMesssage( authorization_result_in_text + tr( ". user with login " ) + login + tr( " in system now" ) );
-        sendToAllClientsChangesInClients( {{login,true}}, clientSocket );
-        return;
     }
-    emit gotNewMesssage( authorization_result_in_text );
-    sendToClient( clientSocket, Server_Code::authorization_failed, { { "message", authorization_result_in_text } } );
+    else
+    {
+        code = Server_Code::authorization_failed;
+    }
+    emit gotNewMesssage( tr ("result of autorization request with login: ") + login + " : " + authorization_result_in_text );
+    sendToClient( clientSocket, code, { { "message", authorization_result_in_text } } );
+}
+
+std::pair<QString, QString> Server::getCredentials(const QJsonObject& obj, const QTcpSocket *clientSocket) {
+    const QString encrypt_obj_inQString{ obj.value( "object" ).toString() };
+    const QJsonObject decrypt_object{ decryptQJsonObjFromEncryptQString( encrypt_obj_inQString, clientSocket ) };
+
+    const QString login{ decrypt_object.value( "login" ).toString() };
+
+    const QString password{ decrypt_object.value( "password" ).toString() };
+    const QByteArray password_in_QByteArray{ password.toUtf8() };
+    const QByteArray hashed_password_in_QByteArray{ QCryptographicHash::hash( password_in_QByteArray, QCryptographicHash::Sha1 ) };
+    const std::string hashed_password_std{ hashed_password_in_QByteArray.toStdString() };
+    const QString hashed_password{ QString::fromUtf8( hashed_password_std.c_str() ) };
+
+    return {login, hashed_password};
 }
 
 bool Server::writeDownConnectedClientName( const QString& login, QTcpSocket *ClientSocket )
@@ -278,7 +299,7 @@ bool Server::isRecipientconnectedNow( const QString& recipient )
     return false;
 }
 
-int Server::findNumberBySocket( QTcpSocket* current_socket )
+int Server::findNumberBySocket( const QTcpSocket* current_socket )
 {
     const int size_map{ clients_.size() };
     for ( int i = 0; i < size_map; i++ )
@@ -299,7 +320,7 @@ void Server::calculateAndSetInClientMap( int number_from_client, QTcpSocket *soc
     clients_[ findNumberBySocket( socket )].session_key_object.calculateSessionKey( number_from_client );
 }
 
-int Server::getSessionKeyBySocketFromMap( QTcpSocket *socket )
+int Server::getSessionKeyBySocketFromMap( const QTcpSocket *socket )
 {
     if ( findNumberBySocket( socket ) == -1 )
     {
@@ -348,7 +369,7 @@ QString Server::cryptQJsonObjAndPutItInQString( const QJsonObject& obj, QTcpSock
     return crypt_obj_in_QString;
 }
 
-QJsonObject Server::decryptQJsonObjFromEncryptQString( const QString& encrypt_QString, QTcpSocket *socket )
+QJsonObject Server::decryptQJsonObjFromEncryptQString( const QString& encrypt_QString, const QTcpSocket *socket )
 {
     QByteArray jByte = encrypt_QString.toUtf8();
     int key = getSessionKeyBySocketFromMap( socket );

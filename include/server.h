@@ -49,7 +49,7 @@ private:
 
     void readAndForwardMessageToRecipient( const QJsonObject& obj, QTcpSocket* clientSocket );
     int forwardMessageToRecipient( const QString& recipient, const QJsonObject& messageObj );
-    int findNumberBySocket( QTcpSocket* current_socket );
+    int findNumberBySocket( const QTcpSocket* current_socket );
     bool isRecipientconnectedNow( const QString& recipient );
     void registrationRequest( const QJsonObject& obj, QTcpSocket* clientSocket );
     void authorizationRequest( const QJsonObject& obj, QTcpSocket *clientSocket );
@@ -60,13 +60,14 @@ private:
     void sendToAllClientsChangesInClients( const QJsonObject& changes, QTcpSocket *ignore_socket );
 
     void calculateAndSetInClientMap( int intermediat_number_from_client, QTcpSocket *socket );
-    int getSessionKeyBySocketFromMap( QTcpSocket *socket );
+    int getSessionKeyBySocketFromMap( const QTcpSocket *socket );
     std::optional< int > getIntermediatNumberBySocketFromMap( QTcpSocket *socket );
     void secureSessionClientStep( const QJsonObject& obj, QTcpSocket* clientSocket );
     void receiveMistake( const QJsonObject& obj, QTcpSocket* clientSocket );
 
     QByteArray cryptQByteArray( const QByteArray& jByte, int key );
     QString cryptQJsonObjAndPutItInQString( const QJsonObject& obj, QTcpSocket *socket );
-    QJsonObject decryptQJsonObjFromEncryptQString( const QString& encrypt_QString, QTcpSocket *socket );
+    QJsonObject decryptQJsonObjFromEncryptQString( const QString& encrypt_QString, const QTcpSocket *socket );
     std::vector< int > getVectorDigitsFromNumber( int number );
+    std::pair<QString, QString> getCredentials(const QJsonObject& obj, const QTcpSocket *clientSocket);
 };
