@@ -5,6 +5,7 @@ CONFIG += c++17
 SOURCES += \
         src/BackEnd.cpp \
         src/Database.cpp \
+        src/MessageProcessor.cpp \
         src/SessionKey.cpp \
         src/main.cpp \
         src/server.cpp
@@ -23,6 +24,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 HEADERS += \
     include/BackEnd.h \
     include/Database.h \
+    include/MessageProcessor.h \
     include/SessionKey.h \
     include/messagecode.h \
     include/server.h \
