@@ -24,20 +24,11 @@ QString BackEnd::stopClicked()
 {
     if( server_->tcpServer_->isListening() )
     {
+        server_->serverStoped();
+
         disconnect( server_->tcpServer_.get(), &QTcpServer::newConnection, server_.get(), &Server::newConnection );
 
-        QList< QTcpSocket* > clients = server_->getClients();
-        auto clients_number{ clients.count() };
-        for( int i = 0; i < clients_number; i++ )
-        {
-            server_->sendToClient( clients.at(i), Server_Code::server_stopped,{ { "message", tr( "Connection closed" ) } } );
-        }
-        // Stop listen NEW clients, with try to connect:
-        server_->tcpServer_->close();
-        // Stop listen already connected clients:
-        server_->disconnectSockets();
-
-        return tr( "Server stopped, post is closed" );
+        return tr( "Server stopped, port is closed" );
     }
     return tr( "Error: Server was not running");
 }
