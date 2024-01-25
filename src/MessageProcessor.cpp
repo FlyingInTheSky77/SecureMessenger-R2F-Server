@@ -42,38 +42,30 @@ void MessageProcessor::processIncomingMessages( const QJsonObject& obj, QTcpSock
 
 void MessageProcessor::processUserDisconnection(QTcpSocket* disconnected_user_socket)
 {
-    // remove this checking in future:
-    const int number{ findNumberBySocket( disconnected_user_socket ) };
-    if ( number == -1 )
+    if (clients_.contains( disconnected_user_socket ))
     {
-        qDebug() << __FILE__ << __LINE__ << "Error: Can't remove client from Qmap clients_";
-        return;
+        qDebug() << __FILE__ << __LINE__  << "remove user";
+        clients_.remove( disconnected_user_socket );
     }
-    const QString login = findUserBySocket(disconnected_user_socket);
-    setActivityStatus( login, false );
-
-    const int numbers_of_removed_client_in_map{ clients_.remove( number ) };
-    qDebug() << __FILE__ << __LINE__  << "numbers_of_removed" << numbers_of_removed_client_in_map << "number:" << number;
+    else
+    {
+        qDebug() << __FILE__ << __LINE__ << "Error: Can't remove client from Qmap clients_: socket doen't match";
+    }
 }
 
 void MessageProcessor::addNewClientSocket( QTcpSocket* socket )
 {
-    const int number{ clients_.count() };
-    clients_.insert( number, { socket, {},{""} } );
+    clients_.insert( socket, { {},{""} } );
+
     sendToClient( socket, Server_Code::connection_established );
 }
 
 QList< QTcpSocket * > MessageProcessor::getClientsList()
 {
-    QList< QTcpSocket* > clients_list;
-    foreach( auto item, clients_ )
-    {
-        clients_list << item.socket;
-    }
-    return clients_list;
+    return clients_.keys();
 }
 
-QMap< int, client_struct > MessageProcessor::getClientsMap()
+QMap< QTcpSocket*, client_struct > MessageProcessor::getClientsMap()
 {
     return clients_;
 }
@@ -111,11 +103,10 @@ void MessageProcessor::sendToClient( QTcpSocket *socket, const Server_Code cur_c
 
 void MessageProcessor::sendClientsServerStoped()
 {
-    QList< QTcpSocket* > clients = getClientsList();
-    auto clients_number{ clients.count() };
-    for( int i = 0; i < clients_number; i++ )
+    QList < QTcpSocket* > list_of_clients_sockets = clients_.keys();
+    for (auto socket: list_of_clients_sockets)
     {
-        sendToClient( clients.at(i), Server_Code::server_stopped,{ { "message", "Connection closed" } } );
+        sendToClient( socket, Server_Code::server_stopped,{ { "message", "Connection closed" } } );
     }
 }
 
@@ -131,22 +122,39 @@ void MessageProcessor::registrationRequest( const QJsonObject& obj, QTcpSocket* 
     const QString login = credentials.first;
     const QString hashed_password = credentials.second;
 
-    QString registration_result;
     Server_Code code;
 
-    if ( myDatabase_.registration( login, hashed_password, registration_result ) )
+    Identification_request registration_result = myDatabase_.registration( login, hashed_password );
+
+    if ( registration_result.is_request_granted )
     {
-        code = Server_Code::registration_successful;
+
+        if ( saveUserName( login, clientSocket ) )
+        {
+            code = Server_Code::registration_successful;
+            QJsonObject login_and_status_one_user{{"login", login},{"activityStatus","true"}};
+            qDebug() << __FILE__ << __LINE__ << "registration_successful";
+
+            sendToAllClientsChangesInClients( login_and_status_one_user, clientSocket );
+        }
+        else
+        {
+            code = Server_Code::registration_failed;
+            // in this case, it's necessary to user reconnect to server, not just relogging
+            registration_result.message +=  ". Important: reconnection to server needed.";
+            qDebug() << __FILE__ << __LINE__ << "Important: reconnection to server needed";
+        }
     }
     else
     {
         code = Server_Code::registration_failed;
+        qDebug() << __FILE__ << __LINE__ << "registration_failed";
     }
 
-    emit showMessage_signal( "result of registration with login" + login + registration_result );
-    sendToClient( clientSocket, code, { { "message", registration_result } } );
+    emit showMessage_signal( "result of registration request with login \"" + login +"\" : " +  registration_result.message );
+    sendToClient( clientSocket, code, { { "message", registration_result.message } } );
+    qDebug() << __FILE__ << __LINE__ << "result of registration request with login \"" + login +"\" : " +  registration_result.message;
 }
-
 
 void MessageProcessor::authorizationRequest( const QJsonObject& obj, QTcpSocket *clientSocket )
 {
@@ -155,20 +163,23 @@ void MessageProcessor::authorizationRequest( const QJsonObject& obj, QTcpSocket 
     const QString hashed_password = credentials.second;
 
     Server_Code code;
-    QString authorization_result_in_text;
+    Identification_request authorization_result = myDatabase_.authorization( login, hashed_password );
 
-    if ( myDatabase_.authorization( login, hashed_password, authorization_result_in_text ) )
+    if ( authorization_result.is_request_granted )
     {
-        if ( writeDownConnectedClientName( login, clientSocket ) )
+        if ( saveUserName( login, clientSocket ) )
         {
             code = Server_Code::authorization_successful;
-            sendToAllClientsChangesInClients( {{login,true}}, clientSocket );
+            QJsonObject login_and_status_one_user{{"login", login},{"activityStatus","true"}};
+
+            sendToAllClientsChangesInClients( login_and_status_one_user, clientSocket );
         }
         else
         {
-            code = Server_Code::authorization_failed;
+            code = Server_Code::technical_errors_on_server;
             // in this case, it's necessary to user reconnect to server, not just relogging
-            authorization_result_in_text += ". Important: reconnection to server needed.";
+            authorization_result.message += ". Important: reconnection to server needed.";
+            qDebug() << "Important: reconnection to server needed";
         }
     }
     else
@@ -176,8 +187,8 @@ void MessageProcessor::authorizationRequest( const QJsonObject& obj, QTcpSocket 
         code = Server_Code::authorization_failed;
     }
 
-    emit showMessage_signal( "result of autorization request with login: " + login + " : " + authorization_result_in_text );
-    sendToClient( clientSocket, code, { { "message", authorization_result_in_text } } );
+    emit showMessage_signal( "result of autorization request with login \"" + login + "\" : " + authorization_result.message );
+    sendToClient( clientSocket, code, { { "message", authorization_result.message } } );
 }
 
 void MessageProcessor::receiveMistake( const QJsonObject& obj, QTcpSocket* clientSocket )
@@ -211,19 +222,16 @@ void MessageProcessor::readAndForwardMessageToRecipient( const QJsonObject& obj,
     }
 
     const QString recipient{ decrypt_object.value( "recipient" ).toString() };
-    const QString author{ decrypt_object.value( "author" ).toString() };
 
-    if ( isRecipientconnectedNow( recipient ) )
+    QTcpSocket* recipient_socket = getSocketIfRecipientConnected( recipient );
+    if ( recipient_socket )
     {
-        if ( !forwardMessageToRecipient( recipient, decrypt_object ) )
-        {
-            qDebug() << __FILE__ << __LINE__ << "Error on server during forward message to" + recipient + " from" + author;
-            emit showMessage_signal( "error forward during forward message to" + recipient + " from" + author);
-        }
-        return;
+        forwardMessageToRecipient( recipient, recipient_socket, decrypt_object );
     }
-
-    sendToClient( clientSocket, Server_Code::recipient_offline, { { "message", "client offline for now, send message letter" } } );
+    else
+    {
+        sendToClient( clientSocket, Server_Code::recipient_offline, { { "message", "client offline for now, send message letter" } } );
+    }
 }
 
 void MessageProcessor::sendToClientContactList( QTcpSocket *socket )
@@ -236,101 +244,62 @@ void MessageProcessor::sendToClientContactList( QTcpSocket *socket )
     qDebug() << __FILE__ << __LINE__ << "Error: not recive contact list to sedt to client";
 }
 
-void MessageProcessor::sendToAllClientsChangesInClients( const QJsonObject& changes, QTcpSocket *ignore_socket )
+void MessageProcessor::sendToAllClientsChangesInClients( const QJsonObject& changes, const QTcpSocket *ignore_socket )
 {
-    for (const auto& item: clients_)
+    for ( QMap<QTcpSocket*, client_struct>::iterator it = clients_.begin(); it != clients_.end(); ++it )
     {
+        QTcpSocket* current_socket = it.key();
+
         //we don't send the changed status to the client, whose status has changed
-        if ( item.socket == ignore_socket )
+        if ( current_socket == ignore_socket )
         {
             continue;
         }
-
-        sendToClient( item.socket, Server_Code::changes_in_contact_list, changes);
+        sendToClient( current_socket, Server_Code::changes_in_contact_list, changes);
     }
 }
 
-int MessageProcessor::forwardMessageToRecipient( const QString& recipient, const QJsonObject& messageObj )
+void MessageProcessor::forwardMessageToRecipient( const QString& recipient, QTcpSocket* recipient_socket, const QJsonObject& messageObj )
 {
     const QString author{ messageObj.value( "author" ).toString() };
     const QString timestamp{ messageObj.value( "timestamp" ).toString() };
     const QString message{ messageObj.value( "message" ).toString() };
-    const QJsonObject new_message_obj{ { "author", author }, { "recipient", recipient }, { "timestamp", timestamp }, { "message", message } };
+    const QJsonObject message_json { { "author", author }, { "recipient", recipient }, { "timestamp", timestamp }, { "message", message } };
 
-    const int size_map{ clients_.size() };
-    for ( int i = 0; i < size_map; i++ )
-    {
-        if ( clients_[i].name == recipient )
-        {
-            sendToClient( clients_[i].socket, Server_Code::message_to_recipient, new_message_obj );
-            return 1; // fix it in the next step: another way of errors handling needed
-        }
-    }
-    return 0;
-}
-
-bool MessageProcessor::isClientConnect( QTcpSocket *socket )
-{
-    for (const auto& item: clients_ )
-    {
-        if ( item.socket == socket )
-            return true;
-    }
-    return false;
-}
-
-int MessageProcessor::findNumberBySocket( const QTcpSocket* current_socket )
-{
-    const int size_map{ clients_.size() };
-    for ( int i = 0; i < size_map; i++ )
-    {
-        if ( clients_[i].socket == current_socket)
-            return i;
-    }
-    return -1;
-}
-
-QString MessageProcessor::findUserBySocket( const QTcpSocket* current_socket )
-{
-    const int size_map{ clients_.size() };
-    for ( int i = 0; i < size_map; i++ )
-    {
-        if ( clients_[i].socket == current_socket)
-            return clients_[i].name;
-    }
-    return{};
+    sendToClient( recipient_socket, Server_Code::message_to_recipient, message_json );
 }
 
 void MessageProcessor::calculateAndSetInClientMap( int number_from_client, QTcpSocket *socket )
 {
-    if ( findNumberBySocket( socket ) == -1 )
+    if ( clients_.contains( socket ) )
     {
-        qDebug() << __FILE__ << __LINE__ << "Error: Can't calculate session key and set client in map";
-        return;
+        clients_[ socket ].session_key_object.calculateSessionKey( number_from_client );
     }
-    clients_[ findNumberBySocket( socket )].session_key_object.calculateSessionKey( number_from_client );
 }
 
-bool MessageProcessor::writeDownConnectedClientName( const QString& login, QTcpSocket *ClientSocket )
+bool MessageProcessor::saveUserName( const QString& login, QTcpSocket *ClientSocket )
 {
-    const int number{ findNumberBySocket( ClientSocket ) };
-    if ( number == -1 )
+    if ( clients_.contains( ClientSocket ) )
     {
-        qDebug() << __FILE__ << __LINE__ << "Error: Can't write client into Qmap clients_";
+        clients_[ClientSocket].login = login;
+        return true;
+    }
+    else
+    {
         return false;
     }
-    clients_[number].name = login;
-    return true;
 }
 
 std::optional< int > MessageProcessor::getIntermediatNumberBySocketFromMap( QTcpSocket *socket )
 {
-    if ( findNumberBySocket( socket ) == -1 )
+    if ( clients_.contains( socket ) )
     {
-        qDebug() << __FILE__ << __LINE__ << "Error in method Server::getSessionKeyBySocketFromMap( QTcpSocket *socket )";
+        return clients_[socket].session_key_object.getIntermediateNumberForClient();
+    }
+    else
+    {
         return std::nullopt;
     }
-    return clients_[findNumberBySocket( socket )].session_key_object.getIntermediateNumberForClient();
 }
 
 void MessageProcessor::secureSessionClientStep( const QJsonObject& obj, QTcpSocket* clientSocket )
@@ -338,9 +307,9 @@ void MessageProcessor::secureSessionClientStep( const QJsonObject& obj, QTcpSock
     int intermediate_number_from_client = obj.value( "first_step" ).toInt();
     calculateAndSetInClientMap( intermediate_number_from_client, clientSocket );
 
-    if ( auto m_intermediate_number = getIntermediatNumberBySocketFromMap( clientSocket ); m_intermediate_number != std::nullopt )
+    if ( auto intermediate_number = getIntermediatNumberBySocketFromMap( clientSocket ); intermediate_number != std::nullopt )
     {
-        const QJsonObject cur_object{ { "code", static_cast< int >( Server_Code::secure_session_server_step) }, { "second_step", m_intermediate_number.value() } };
+        const QJsonObject cur_object{ { "code", static_cast< int >( Server_Code::secure_session_server_step) }, { "second_step", intermediate_number.value() } };
         const QJsonDocument doc_encrypt( cur_object );
         const QByteArray jByte_encrypt( doc_encrypt.toJson( QJsonDocument::Compact ) );
 
@@ -350,14 +319,20 @@ void MessageProcessor::secureSessionClientStep( const QJsonObject& obj, QTcpSock
     qDebug() << __FILE__ << __LINE__ << "Error: getIntermediatNumberBySocketFromMap";
 }
 
-int MessageProcessor::getSessionKeyBySocketFromMap( const QTcpSocket *socket )
-{
-    if ( findNumberBySocket( socket ) == -1 )
+int MessageProcessor::getUserSessionKey( QTcpSocket *socket )
+{    
+    if ( clients_.contains( socket ) )
     {
-        qDebug() << __FILE__ << __LINE__ << "Error in method Server::getSessionKeyBySocketFromMap( QTcpSocket *socket )";
+        auto user_info = clients_[socket];
+        qDebug() << __FILE__ << __LINE__ << " user_info.login: " << user_info.login;
+
+        return user_info.session_key_object.getSessionKey();
+    }
+    else
+    {
+        qDebug() << __FILE__ << __LINE__ << " Error getting SessionKey ";
         return -1;
     }
-    return clients_[findNumberBySocket( socket )].session_key_object.getSessionKey();
 }
 
 QByteArray MessageProcessor::cryptQByteArray ( const QByteArray& jByte, int key )
@@ -381,7 +356,8 @@ QString MessageProcessor::cryptQJsonObjAndPutItInQString( const QJsonObject& obj
 {
     QJsonDocument doc( obj );
     QByteArray jByte( doc.toJson( QJsonDocument::Compact ) );
-    const int key{ getSessionKeyBySocketFromMap( socket ) };
+    qDebug() << __FILE__ << __LINE__ << "clients[socket].login :" <<clients_[socket].login ;
+    const int key{ getUserSessionKey( socket ) };
     if ( key == -1 )
         return {};
     const QByteArray crypt_jByte{ cryptQByteArray( jByte, key ) };
@@ -389,10 +365,10 @@ QString MessageProcessor::cryptQJsonObjAndPutItInQString( const QJsonObject& obj
     return crypt_obj_in_QString;
 }
 
-QJsonObject MessageProcessor::decryptQJsonObjFromEncryptQString( const QString& encrypt_QString, const QTcpSocket *socket )
+QJsonObject MessageProcessor::decryptQJsonObjFromEncryptQString( const QString& encrypt_QString, QTcpSocket *socket )
 {
     QByteArray jByte = encrypt_QString.toUtf8();
-    int key = getSessionKeyBySocketFromMap( socket );
+    const int key = getUserSessionKey( socket );
     if ( key == -1 )
         return {};
     QByteArray decrypt_jByte = cryptQByteArray( jByte, key );
@@ -422,18 +398,22 @@ std::vector<int>  MessageProcessor::getVectorDigitsFromNumber( int number )
     return number_in_vector;
 }
 
-bool MessageProcessor::isRecipientconnectedNow( const QString& recipient )
+QTcpSocket* MessageProcessor::getSocketIfRecipientConnected( const QString& recipient )
 {
-    const int size_map{ clients_.size() };
-    for ( int i = 0; i < size_map; i++ )
+    QTcpSocket *recipient_socket = nullptr;
+
+    for ( QMap<QTcpSocket*, client_struct>::iterator it = clients_.begin(); it != clients_.end(); ++it )
     {
-        if ( clients_[i].name == recipient )
-            return true;
+        if (it.value().login == recipient)
+        {
+            recipient_socket = it.key();
+            break;
+        }
     }
-    return false;
+    return recipient_socket;
 }
 
-std::pair<QString, QString> MessageProcessor::getCredentials(const QJsonObject& obj, const QTcpSocket *clientSocket)
+std::pair<QString, QString> MessageProcessor::getCredentials(const QJsonObject& obj, QTcpSocket *clientSocket)
 {
     const QString encrypt_obj_inQString{ obj.value( "object" ).toString() };
     const QJsonObject decrypt_object{ decryptQJsonObjFromEncryptQString( encrypt_obj_inQString, clientSocket ) };

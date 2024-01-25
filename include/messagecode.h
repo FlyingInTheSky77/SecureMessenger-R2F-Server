@@ -17,6 +17,7 @@ enum class Server_Code
     secure_session_server_step,
 
     mistake,
+    technical_errors_on_server,
 
     changes_in_contact_list
 };

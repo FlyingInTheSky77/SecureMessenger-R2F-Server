@@ -28,12 +28,13 @@ void Server::newConnection()
 }
 
 void Server::disconnectSockets()
-{    
-    const auto clients = messageProcessor_.get() -> getClientsMap();
-    for ( const auto& item: clients )
+{
+    auto clients = messageProcessor_.get() -> getClientsMap();
+
+    for ( QMap<QTcpSocket*, client_struct>::iterator it = clients.begin(); it != clients.end(); ++it )
     {
-        disconnect( item.socket, &QTcpSocket::readyRead, this, &Server::readClient );
-        disconnect( item.socket, &QTcpSocket::disconnected, this, &Server::gotDisconnection );
+        disconnect( it.key(), &QTcpSocket::readyRead, this, &Server::readClient );
+        disconnect( it.key(), &QTcpSocket::disconnected, this, &Server::gotDisconnection );
     }
 
     messageProcessor_.get() -> clearClients();
@@ -71,9 +72,14 @@ void Server::gotDisconnection()
 
 void Server::sendToClient( QTcpSocket *socket, const QByteArray jByte )
 {
-    if( socket->write( jByte ) )
+    qint64 bytesWritten = socket->write( jByte );
+    if( bytesWritten == -1 )
     {
-        // processing if error received
+        qDebug() << "Error writing to socket:" << socket->errorString();
+    }
+    else
+    {
+        qDebug() << __FILE__ << __LINE__ << "Successfully wrote";
     }
 }
 
