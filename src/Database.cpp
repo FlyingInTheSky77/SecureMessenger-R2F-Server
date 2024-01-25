@@ -38,84 +38,120 @@ Database::Database()
     connectToDatabase();
     createTable();
 }
-
 int Database::getCount()
 {
+    int number_of_users = 0;
+
     QSqlQuery query;
+
     if( !query.exec( GET_COUNT ) )
     {
         qDebug() << __FILE__ << __LINE__ << "Error: getting the number of users";
-        return 0;
     }
-    qDebug() << __FILE__ << __LINE__ << "Number of users received";
 
-    int numbers{};
     if ( query.next() )
     {
-        numbers = query.value( 0 ).toInt();
-        return numbers;
+        number_of_users = query.value( 0 ).toInt();
+        qDebug() << __FILE__ << __LINE__ << "Number of users received";
     }
-    return 0;
+    return number_of_users;
 }
 
-bool Database::checkUser( const QString &login )
+bool Database::checkIfUserWithLoginExists( const QString &login )
 {
     QSqlQuery query;
-
     QString str = CHECK_USER.arg( login );
+    bool isLoginInDatabase = false;
+
     if( !query.exec( str ) )
     {
-        qDebug() << __FILE__ << __LINE__ << "Error: user verification error";
-        return false;
+        qDebug() << __FILE__ << __LINE__ << "There are problems with the database or communication with it";
+        isLoginInDatabase = false;
     }
-    qDebug() << __FILE__ << __LINE__ << "User verified successfully";
-    query.next();
-    return query.value( 0 ).toInt();
+    else
+    {
+        if ( query.next() )
+        {
+            int count = query.value( 0).toInt();
+            if ( count > 0)
+            {
+                qDebug() << __FILE__ << __LINE__ << "Login exists in the database";
+                isLoginInDatabase = true;
+            }
+            else
+            {
+                qDebug() << __FILE__ << __LINE__ << "Login does not exist in the database";
+                isLoginInDatabase = false;
+            }
+        }
+        else
+        {
+            qDebug() << __FILE__ << __LINE__ << "Error while fetching result";
+            isLoginInDatabase = false;
+        }
+    }
+    return isLoginInDatabase;
 }
 
-bool Database::registration( const QString &login, const QString& pass, QString& result_in_text )
+Identification_request Database::registration( const QString &login, const QString& password )
 {
-
     QSqlQuery query;
-    if ( checkUser( login ) )
+    Identification_request registration_result;
+
+    if ( checkIfUserWithLoginExists( login ) )
     {
-        result_in_text = QIODevice::tr( "User with this name is already registered" );
-        return false;
+        registration_result.is_request_granted = false;
+        registration_result.message = QIODevice::tr( "User with this name is already registered" );
+        qDebug() << __FILE__ << __LINE__ << "User with this name is already registered";
     }
 
-    if( !query.exec( INSERT_USER.arg( QString::number( getCount() + 1 ) ).arg( login ).arg( pass ).arg( false ) ) )
+    else if( query.exec( INSERT_USER.arg( QString::number( getCount() + 1 ) ).arg( login ).arg( password ).arg( false ) ) )
     {
-        result_in_text = QIODevice::tr( "User adding error" );
-        return false;
+        registration_result.is_request_granted = true;
+        registration_result.message = QIODevice::tr( "User registered successfully" );
+        qDebug() << __FILE__ << __LINE__ << "User registered successfully";
     }
 
-    result_in_text = QIODevice::tr( "User added successfully" );
-    return true;
+    else
+    {
+        registration_result.is_request_granted = false;
+        registration_result.message = QIODevice::tr( "User registeration error: technical errors on server" );
+        qDebug() << __FILE__ << __LINE__ << "User registeration error: technical errors on server";
+    }
+
+    return registration_result;
 }
 
-bool Database::authorization(const QString &login, const QString &pass, QString& result_in_text)
+Identification_request Database::authorization(const QString &login, const QString &password )
 {
     QSqlQuery query;
+    Identification_request authorization_result;
 
     if( !query.exec( GET_PASSWORD.arg( login ) ) )
     {
-        result_in_text = QIODevice::tr( "User authorization error" );
-        return false;
+        authorization_result.is_request_granted = false;
+        authorization_result.message = QIODevice::tr( "User authorization error" );
+        return authorization_result;
     }
     query.next();
     if ( !query.isValid() )
     {
-        result_in_text = QIODevice::tr( "There are no clients with this login, the user is not authorized" );
-        return false;
+        authorization_result.message = QIODevice::tr( "There are no clients with this login, the user is not authorized" );
+        authorization_result.is_request_granted = false;
+        return authorization_result;
     }
-    if ( query.value( 0 ).toString() == pass )
+    if ( query.value( 0 ).toString() == password )
     {
         setActivityStatus( login, true);
-        result_in_text = QIODevice::tr( "User is successfully authorized" );
-        return true;
+        authorization_result.message = QIODevice::tr( "User is successfully authorized" );
+        authorization_result.is_request_granted = true;
     }
-    result_in_text = QIODevice::tr( "Passwords did not match, user is not logged in" );
-    return false;
+    else
+    {
+        authorization_result.message = QIODevice::tr( "Passwords did not match, user is not logged in" );
+        authorization_result.is_request_granted = false;
+    }
+    return authorization_result;
 }
 
 bool Database::setActivityStatus( const QString& user, bool status )
@@ -170,6 +206,7 @@ std::optional< bool> Database::getActivityStatus( const QString& user )
 
     qDebug() << __FILE__ << __LINE__ << "Error: get activity status from database";
     return std::nullopt;
+
 }
 
 std::optional< QJsonObject > Database::getActivityStatusAllUsers()
