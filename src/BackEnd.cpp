@@ -5,58 +5,44 @@ BackEnd::BackEnd( QObject *parent )
     : QObject{ parent }
     , server_{ std::make_unique< Server >() }
 {
-    connect( server_.get(), &Server::gotNewMesssage, this, &BackEnd::gotNewMesssage );
-    connect( server_->tcpServer_.get(), &QTcpServer::newConnection, this, &BackEnd::smbConnectedToServer );
-    connect( server_.get(), &Server::smbDisconnected, this, &BackEnd::smbDisconnectedFromServer );
+    connect( server_.get(), &Server::gotNewMesssage_signal, this, &BackEnd::gotNewMesssage );
+    connect( server_.get(), &Server::smbConnected_signal, this, &BackEnd::smbConnectedToServer );
+    connect( server_.get(), &Server::smbDisconnected_signal, this, &BackEnd::smbDisconnectedFromServer );
+}
+
+BackEnd::~BackEnd()
+{
+    disconnect( server_.get(), &Server::gotNewMesssage_signal, this, &BackEnd::gotNewMesssage );
+    disconnect( server_.get(), &Server::smbConnected_signal, this, &BackEnd::smbConnectedToServer );
+    disconnect( server_.get(), &Server::smbDisconnected_signal, this, &BackEnd::smbDisconnectedFromServer );
 }
 
 QString BackEnd::startClicked()
 {
-    if ( !server_->tcpServer_->listen( QHostAddress::Any, 5555 ) )
-    {
-        return tr( "Error: port is taken by some other service" );
-    }
-    connect( server_->tcpServer_.get(), &QTcpServer::newConnection, server_.get(), &Server::newConnection );
-    return tr( "Server started, port is openned");
+    return server_->start();
 }
 
 QString BackEnd::stopClicked()
 {
-    if( server_->tcpServer_->isListening() )
-    {
-        server_->serverStoped();
-
-        disconnect( server_->tcpServer_.get(), &QTcpServer::newConnection, server_.get(), &Server::newConnection );
-
-        return tr( "Server stopped, port is closed" );
-    }
-    return tr( "Error: Server was not running");
+    return server_->stop();
 }
 
-QString BackEnd::testClicked()
+QString BackEnd::testConnectionClicked()
 {
-    if( server_->tcpServer_->isListening() )
-    {
-        return QString( "%1 %2" )
-               .arg( tr( "Server is listening, number of connected clients:" ) )
-               .arg( QString::number( server_->getClients().count() ) );
-    }
-    return QString( "%1 %2" )
-           .arg( tr( "Server is not listening, number of connected clients:") )
-           .arg( QString::number( server_->getClients().count() ) );
+    return server_->showServerStatus();
 }
 
 void BackEnd::smbConnectedToServer()
 {
-    emit smbConnected();
+    emit smbConnected_signal();
 }
 
 void BackEnd::smbDisconnectedFromServer()
 {    
-    emit smbDisconnected();
+    emit smbDisconnected_signal();
 }
 
 void BackEnd::gotNewMesssage( QString message )
 {
-    emit newMessage( message );
+    emit newMessage_signal( message );
 }

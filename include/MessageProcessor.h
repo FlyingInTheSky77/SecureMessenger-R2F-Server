@@ -29,8 +29,8 @@ public:
 
     void clearClients();
     void addNewClientSocket(QTcpSocket* socket);
-    QList< QTcpSocket * > getClientsList();
-    QMap< QTcpSocket*, client_struct > getClientsMap();
+    QList< QTcpSocket * > getClientSocketsList();
+    int getNumberConnectedClients();
 
     void sendClientsServerStoped();
 
