@@ -12,11 +12,6 @@ Server::Server()
     connect( messageProcessor_.get(), &MessageProcessor::showMessage_signal, this, &Server::showMessage );
 }
 
-QList< QTcpSocket* > Server::getClients()
-{
-    return messageProcessor_.get() -> getClientsList();
-}
-
 void Server::newConnection()
 {
     QTcpSocket *clientSocket{ tcpServer_->nextPendingConnection() };
@@ -24,20 +19,38 @@ void Server::newConnection()
     connect( clientSocket, &QTcpSocket::readyRead, this, &Server::readClient );
     connect( clientSocket, &QTcpSocket::disconnected, this, &Server::gotDisconnection );
 
-    messageProcessor_.get() -> addNewClientSocket( clientSocket );
+    messageProcessor_ -> addNewClientSocket( clientSocket );
+
+    emit smbConnected_signal();
 }
 
 void Server::disconnectSockets()
 {
-    auto clients = messageProcessor_.get() -> getClientsMap();
+    QList< QTcpSocket * > clientSocketsList = messageProcessor_->getClientSocketsList();
 
-    for ( QMap<QTcpSocket*, client_struct>::iterator it = clients.begin(); it != clients.end(); ++it )
+    for (auto socket: clientSocketsList)
     {
-        disconnect( it.key(), &QTcpSocket::readyRead, this, &Server::readClient );
-        disconnect( it.key(), &QTcpSocket::disconnected, this, &Server::gotDisconnection );
+        disconnect( socket, &QTcpSocket::readyRead, this, &Server::readClient );
+        disconnect( socket, &QTcpSocket::disconnected, this, &Server::gotDisconnection );
     }
 
-    messageProcessor_.get() -> clearClients();
+    messageProcessor_->clearClients();
+}
+
+QString Server::start()
+{
+    QString startServerResult;
+    if ( !tcpServer_->listen( QHostAddress::Any, 5555 ) )
+    {
+        startServerResult = tr( "Error: port is taken by some other service" );
+    }
+    else
+    {
+        connect( tcpServer_.get(), &QTcpServer::newConnection, this, &Server::newConnection );
+        startServerResult = tr( "Server started, port is openned");
+    }
+
+    return startServerResult;
 }
 
 void Server::readClient()
@@ -48,26 +61,28 @@ void Server::readClient()
     const QJsonDocument doc{ QJsonDocument::fromJson( clientSocket->readAll(), &parseError ) };
     if ( parseError.error )
     {
-        emit gotNewMesssage( tr( "Error: QJsonParseError" ) );
-        return;
+        emit gotNewMesssage_signal( tr( "Error: QJsonParseError" ) );
     }
-    const QJsonObject obj{ doc.object() };
-    messageProcessor_.get() -> processIncomingMessages( obj, clientSocket );
+    else
+    {
+        const QJsonObject obj{ doc.object() };
+        messageProcessor_->processIncomingMessages( obj, clientSocket );
+    }
 }
 
 void Server::showMessage( QString msg )
 {
-    emit gotNewMesssage( msg );
+    emit gotNewMesssage_signal( msg );
 }
 
 void Server::gotDisconnection()
 {
     QTcpSocket* disconnected_user_socket = static_cast< QTcpSocket* >( sender() );
 
-    messageProcessor_.get() -> processUserDisconnection(disconnected_user_socket);
-    disconnected_user_socket -> destroyed();
+    messageProcessor_->processUserDisconnection(disconnected_user_socket);
+    disconnected_user_socket->destroyed();
 
-    emit smbDisconnected();    
+    emit smbDisconnected_signal();
 }
 
 void Server::sendToClient( QTcpSocket *socket, const QByteArray jByte )
@@ -83,11 +98,44 @@ void Server::sendToClient( QTcpSocket *socket, const QByteArray jByte )
     }
 }
 
-void Server::serverStoped()
+QString Server::stop()
 {
-    messageProcessor_.get() -> sendClientsServerStoped();
-    // Stop listen NEW clients, with try to connect:
-    tcpServer_->close();
-    // Stop listen already connected clients:
-    disconnectSockets();
+    QString stopServerResult;
+
+    if( tcpServer_ -> isListening() )
+    {
+        messageProcessor_->sendClientsServerStoped();
+        // Stop listen NEW clients, with try to connect:
+        tcpServer_->close();
+        // Stop listen already connected clients:
+        disconnectSockets();
+
+        disconnect( tcpServer_.get(), &QTcpServer::newConnection, this, &Server::newConnection );
+        stopServerResult = tr( "Server stopped, port is closed" );
+    }
+    else
+    {
+        stopServerResult = tr( "Error: Server was not running");
+    }
+
+    return stopServerResult;
+}
+
+QString Server::showServerStatus()
+{
+    const int number_connected_clients = messageProcessor_->getNumberConnectedClients();
+    QString server_status;
+    if( tcpServer_->isListening() )
+    {
+        server_status = QString( "%1 %2" )
+                 .arg( tr( "Server is listening, number of connected clients:" ) )
+                 .arg( QString::number( number_connected_clients ) );
+    }
+    else
+    {
+        server_status = QString( "%1 %2" )
+                 .arg( tr( "Server is not listening, number of connected clients:") )
+                 .arg( QString::number( number_connected_clients ) );
+    }
+    return server_status;
 }

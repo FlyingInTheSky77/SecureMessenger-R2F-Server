@@ -14,25 +14,27 @@ class Server: public QObject
 
 public:
     Server();
-    std::unique_ptr< QTcpServer > tcpServer_; // move it in private section in next step
 
-    QList< QTcpSocket* > getClients();
-
-    void disconnectSockets();
-    void serverStoped();
+    QString start();
+    QString stop();
+    QString showServerStatus();
 
 public slots:
-    virtual void newConnection();
-    void readClient();
     void gotDisconnection();
 
     void showMessage( QString msg );
     void sendToClient( QTcpSocket *socket, const QByteArray jByte );
 
 signals:
-    void gotNewMesssage( QString msg );
-    void smbDisconnected();
+    void smbConnected_signal();
+    void gotNewMesssage_signal( QString msg );
+    void smbDisconnected_signal();
 
 private:
+    std::unique_ptr< QTcpServer > tcpServer_;
     std::unique_ptr< MessageProcessor > messageProcessor_;
+
+    virtual void newConnection();
+    void readClient();
+    void disconnectSockets();
 };

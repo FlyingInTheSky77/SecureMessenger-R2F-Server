@@ -8,17 +8,19 @@ class BackEnd : public QObject
 
 public:
     explicit BackEnd( QObject *parent = nullptr );
+    ~BackEnd();
+
+    // called from the qml layer:
+    Q_INVOKABLE QString stopClicked();
+    Q_INVOKABLE QString startClicked();
+    Q_INVOKABLE QString testConnectionClicked();
 
 signals:
-    void smbConnected();
-    void smbDisconnected();
-    void newMessage( QString message );
+    void smbConnected_signal();
+    void smbDisconnected_signal();
+    void newMessage_signal( QString message );
 
 public slots:
-    QString stopClicked();
-    QString startClicked();
-    QString testClicked();
-
     void smbConnectedToServer();
     void smbDisconnectedFromServer();
     void gotNewMesssage( QString message );

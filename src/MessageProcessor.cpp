@@ -60,14 +60,14 @@ void MessageProcessor::addNewClientSocket( QTcpSocket* socket )
     sendToClient( socket, Server_Code::connection_established );
 }
 
-QList< QTcpSocket * > MessageProcessor::getClientsList()
+QList< QTcpSocket * > MessageProcessor::getClientSocketsList()
 {
     return clients_.keys();
 }
 
-QMap< QTcpSocket*, client_struct > MessageProcessor::getClientsMap()
+int MessageProcessor::getNumberConnectedClients()
 {
-    return clients_;
+    return clients_.count();
 }
 
 bool MessageProcessor::setActivityStatus( const QString& user, bool status )

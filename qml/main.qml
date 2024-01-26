@@ -17,15 +17,15 @@ Window
     BackEnd
     {
         id: backend
-        onSmbConnected:
+        onSmbConnected_signal:
         {
             ti.append( addMsg( qsTr( "Somebody has connected" ) ) );
         }
-        onSmbDisconnected:
+        onSmbDisconnected_signal:
         {
             ti.append( addMsg( qsTr( "Somebody has disconnected" ) ) );
         }
-        onNewMessage:
+        onNewMessage_signal:
         {
             ti.append( addMsg( message ) );
         }
@@ -88,7 +88,7 @@ Window
             border.color: "#6FA3D2"
             onClicked:
             {
-                ti.append( addMsg( backend.testClicked() ) );
+                ti.append( addMsg( backend.testConnectionClicked() ) );
             }
         }
     }
