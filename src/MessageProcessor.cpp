@@ -72,7 +72,7 @@ int MessageProcessor::getNumberConnectedClients()
 
 bool MessageProcessor::setActivityStatus( const QString& user, bool status )
 {
-    if ( myDatabase_.setActivityStatus( user, false ) )
+    if ( myDatabase_.setActivityStatus( user, status ) )
     {
         return true;
     }
@@ -123,7 +123,6 @@ void MessageProcessor::registrationRequest( const QJsonObject& obj, QTcpSocket* 
     const QString hashed_password = credentials.second;
 
     Server_Code code;
-
     Identification_request registration_result = myDatabase_.registration( login, hashed_password );
 
     if ( registration_result.is_request_granted )
@@ -241,7 +240,7 @@ void MessageProcessor::sendToClientContactList( QTcpSocket *socket )
         sendToClient( socket, Server_Code::contacts_list, contact_list.value() );
         return;
     }
-    qDebug() << __FILE__ << __LINE__ << "Error: not recive contact list to sedt to client";
+    qDebug() << __FILE__ << __LINE__ << "Error: contact list not received";
 }
 
 void MessageProcessor::sendToAllClientsChangesInClients( const QJsonObject& changes, const QTcpSocket *ignore_socket )

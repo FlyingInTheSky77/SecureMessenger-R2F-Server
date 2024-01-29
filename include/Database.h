@@ -22,9 +22,6 @@ const QString GET_COUNT               = "SELECT COUNT(*) FROM users;";
 const QString INSERT_USER             = "INSERT INTO users VALUES(%1, '%2', '%3', '%4');";
 const QString GET_PASSWORD            = "SELECT password FROM users WHERE login = '%1';";
 const QString CHECK_USER              = "SELECT EXISTS (SELECT login FROM users WHERE login = '%1');";
-const QString GET_ALL_USERS_LOGIN     = "SELECT login FROM users";
-const QString GET_ALL_USERS_STATUS    = "SELECT activitystatus FROM users";
-const QString GET_ALL_USERS_ID        = "SELECT id FROM users";
 const QString GET_ACTIVITY_AND_LOGINS = "SELECT login, activitystatus FROM users";
 
 class Database
@@ -33,8 +30,10 @@ public:
     explicit Database();
     Identification_request registration( const QString &login, const QString& password );
     Identification_request authorization( const QString &login, const QString &password );
+
     bool setActivityStatus( const QString& user, bool status );
     std::optional< bool >  getActivityStatus( const QString& user );
+
     std::optional< QJsonObject >  getActivityStatusAllUsers();
     bool setActivityStatusAllUsersToFalse();
 

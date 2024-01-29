@@ -52,7 +52,7 @@ int Database::getCount()
     if ( query.next() )
     {
         number_of_users = query.value( 0 ).toInt();
-        qDebug() << __FILE__ << __LINE__ << "Number of users received";
+        qDebug() << __FILE__ << __LINE__ << "Number of users received: " << number_of_users;
     }
     return number_of_users;
 }
@@ -104,19 +104,18 @@ Identification_request Database::registration( const QString &login, const QStri
         registration_result.message = QIODevice::tr( "User with this name is already registered" );
         qDebug() << __FILE__ << __LINE__ << "User with this name is already registered";
     }
-
     else if( query.exec( INSERT_USER.arg( QString::number( getCount() + 1 ) ).arg( login ).arg( password ).arg( false ) ) )
     {
         registration_result.is_request_granted = true;
         registration_result.message = QIODevice::tr( "User registered successfully" );
         qDebug() << __FILE__ << __LINE__ << "User registered successfully";
     }
-
     else
     {
         registration_result.is_request_granted = false;
         registration_result.message = QIODevice::tr( "User registeration error: technical errors on server" );
         qDebug() << __FILE__ << __LINE__ << "User registeration error: technical errors on server";
+        qDebug() << __FILE__ << __LINE__ << "Error QSqlQuery: " + query.lastError().text();
     }
 
     return registration_result;
@@ -183,28 +182,27 @@ bool Database::setActivityStatusAllUsersToFalse()
 
 std::optional< bool> Database::getActivityStatus( const QString& user )
 {
-    QSqlQuery queryLogin;
-    queryLogin.exec( GET_ALL_USERS_LOGIN );
-    QSqlQuery queryStatus;
-    queryStatus.exec( GET_ALL_USERS_STATUS );
-
     QSqlQuery query;
     query.prepare("SELECT users.login, users.activitystatus FROM users "
                   "WHERE users.login = :name");
     query.bindValue(":name", user);
     query.exec();
-    bool status{false};
+
     while (query.next())
     {
-        status = query.value(0).toBool();//0 or 1
+        bool status = query.value(1).toBool();
+        return status;
     }
 
     if (query.lastError().isValid())
     {
-       return "There are problems with the database or communication with it";
+       qDebug() << __FILE__ << __LINE__ << "SQL Error:" << query.lastError().text();
+    }
+    else
+    {
+        qDebug() << __FILE__ << __LINE__ << "Error: this user is not in the database";
     }
 
-    qDebug() << __FILE__ << __LINE__ << "Error: get activity status from database";
     return std::nullopt;
 
 }
