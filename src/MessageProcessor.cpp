@@ -26,13 +26,13 @@ void MessageProcessor::processIncomingMessages( const QJsonObject& obj, QTcpSock
             sendToClientContactList( clientSocket );
             break;
         case Client_Code::message_to_recipient:
-            readAndForwardMessageToRecipient( obj, clientSocket );
+            processMessageToAnotherClient( obj, clientSocket );
             break;
         case Client_Code::secure_session_client_step:
-            secureSessionClientStep( obj, clientSocket );
+            secureSessionServerStep( obj, clientSocket );
             break;
         case Client_Code::mistake:
-            receiveMistake( obj, clientSocket );
+            processReceivedMistake( obj, clientSocket );
             break;
         default:
             emit showMessage_signal( "we got unknown message from client" );
@@ -70,9 +70,9 @@ int MessageProcessor::getNumberConnectedClients()
     return clients_.count();
 }
 
-bool MessageProcessor::setActivityStatus( const QString& user, bool status )
+bool MessageProcessor::setClientActivityStatus( const QString& login, bool status )
 {
-    if ( myDatabase_.setActivityStatus( user, status ) )
+    if ( myDatabase_.setActivityStatus( login, status ) )
     {
         return true;
     }
@@ -82,20 +82,19 @@ bool MessageProcessor::setActivityStatus( const QString& user, bool status )
     }
 }
 
-void MessageProcessor::sendToClient( QTcpSocket *socket, const Server_Code cur_code )
+void MessageProcessor::sendToClient( QTcpSocket *socket, const Server_Code cur_code, QJsonObject received_object )
 {
-    const QJsonObject obj{ { "code", static_cast< int >( cur_code ) } };
-    const QJsonDocument doc( obj );
-    const QByteArray jByte( doc.toJson( QJsonDocument::Compact ) );
-
-    emit sendToClient_signal(socket, jByte);
-}
-
-void MessageProcessor::sendToClient( QTcpSocket *socket, const Server_Code cur_code, QJsonObject cur_object )
-{
-    const QString encrypt_cur_object_inQString{ cryptQJsonObjAndPutItInQString( cur_object, socket ) };
-    const QJsonObject obj{ { "code", static_cast< int >( cur_code ) }, { "object", encrypt_cur_object_inQString } };
-    const QJsonDocument doc( obj );
+    QJsonObject sent_object{};
+    if ( !received_object.empty() )
+    {
+        const QString encrypt_received_object_inQString{ cryptQJsonObjAndPutItInQString( received_object, socket ) };
+        sent_object = { { "code", static_cast< int >( cur_code ) }, { "object", encrypt_received_object_inQString } };
+    }
+    else
+    {
+        sent_object = { { "code", static_cast< int >( cur_code ) } };
+    }
+    const QJsonDocument doc( sent_object );
     const QByteArray jByte( doc.toJson( QJsonDocument::Compact ) );
 
     emit sendToClient_signal(socket, jByte);
@@ -118,7 +117,7 @@ void MessageProcessor::clearClients()
 
 void MessageProcessor::registrationRequest( const QJsonObject& obj, QTcpSocket* clientSocket )
 {
-    auto credentials = getCredentials(obj, clientSocket);
+    auto credentials = getClientCredentials(obj, clientSocket);
     const QString login = credentials.first;
     const QString hashed_password = credentials.second;
 
@@ -134,7 +133,7 @@ void MessageProcessor::registrationRequest( const QJsonObject& obj, QTcpSocket* 
             QJsonObject login_and_status_one_user{{"login", login},{"activityStatus","true"}};
             qDebug() << __FILE__ << __LINE__ << "registration_successful";
 
-            sendToAllClientsChangesInClients( login_and_status_one_user, clientSocket );
+            sendClientActivityUpdateToAllClients( login_and_status_one_user, clientSocket );
         }
         else
         {
@@ -157,7 +156,7 @@ void MessageProcessor::registrationRequest( const QJsonObject& obj, QTcpSocket* 
 
 void MessageProcessor::authorizationRequest( const QJsonObject& obj, QTcpSocket *clientSocket )
 {
-    auto credentials = getCredentials(obj, clientSocket);
+    auto credentials = getClientCredentials(obj, clientSocket);
     const QString login = credentials.first;
     const QString hashed_password = credentials.second;
 
@@ -171,7 +170,7 @@ void MessageProcessor::authorizationRequest( const QJsonObject& obj, QTcpSocket 
             code = Server_Code::authorization_successful;
             QJsonObject login_and_status_one_user{{"login", login},{"activityStatus","true"}};
 
-            sendToAllClientsChangesInClients( login_and_status_one_user, clientSocket );
+            sendClientActivityUpdateToAllClients( login_and_status_one_user, clientSocket );
         }
         else
         {
@@ -190,7 +189,7 @@ void MessageProcessor::authorizationRequest( const QJsonObject& obj, QTcpSocket 
     sendToClient( clientSocket, code, { { "message", authorization_result.message } } );
 }
 
-void MessageProcessor::receiveMistake( const QJsonObject& obj, QTcpSocket* clientSocket )
+void MessageProcessor::processReceivedMistake( const QJsonObject& obj, QTcpSocket* clientSocket )
 {
     const QString encrypt_obj_inQString{ obj.value( "object" ).toString() };
     const QJsonObject decrypt_object{ decryptQJsonObjFromEncryptQString( encrypt_obj_inQString, clientSocket ) };
@@ -209,27 +208,29 @@ void MessageProcessor::readMessageToServer( const QJsonObject& obj, QTcpSocket* 
     emit showMessage_signal( "message after decryption: "  + message_to_server );
 }
 
-void MessageProcessor::readAndForwardMessageToRecipient( const QJsonObject& obj, QTcpSocket* clientSocket )
+void MessageProcessor::processMessageToAnotherClient( const QJsonObject& obj, QTcpSocket* clientSocket )
 {
     const QString encrypt_obj_inQString{ obj.value( "object" ).toString() };
     const QJsonObject decrypt_object{ decryptQJsonObjFromEncryptQString( encrypt_obj_inQString, clientSocket ) };
 
     if ( decrypt_object.empty() )
     {
-        sendToClient( clientSocket, Server_Code::recipient_offline, { { "message", "client offline for now, send message letter" } } );
-        return;
-    }
-
-    const QString recipient{ decrypt_object.value( "recipient" ).toString() };
-
-    QTcpSocket* recipient_socket = getSocketIfRecipientConnected( recipient );
-    if ( recipient_socket )
-    {
-        forwardMessageToRecipient( recipient, recipient_socket, decrypt_object );
+        qDebug() << __FILE__ << __LINE__ << "The sender disconnected from the server very quickly";
+        // this will be useful in case of multi-threaded processing of incoming messages from clients
     }
     else
     {
-        sendToClient( clientSocket, Server_Code::recipient_offline, { { "message", "client offline for now, send message letter" } } );
+        const QString recipient{ decrypt_object.value( "recipient" ).toString() };
+
+        QTcpSocket* recipient_socket = getSocketIfUserIsAuthorized( recipient );
+        if ( recipient_socket )
+        {
+            forwardMessageToRecipient( recipient, recipient_socket, decrypt_object );
+        }
+        else
+        {
+            sendToClient( clientSocket, Server_Code::recipient_offline, { { "message", "Message wasn't forwarded to recipient, because he is offline. Send message letter" } } );
+        }
     }
 }
 
@@ -243,18 +244,20 @@ void MessageProcessor::sendToClientContactList( QTcpSocket *socket )
     qDebug() << __FILE__ << __LINE__ << "Error: contact list not received";
 }
 
-void MessageProcessor::sendToAllClientsChangesInClients( const QJsonObject& changes, const QTcpSocket *ignore_socket )
+void MessageProcessor::sendClientActivityUpdateToAllClients( const QJsonObject& changes, const QTcpSocket *ignore_socket )
 {
     for ( QMap<QTcpSocket*, client_struct>::iterator it = clients_.begin(); it != clients_.end(); ++it )
     {
         QTcpSocket* current_socket = it.key();
 
-        //we don't send the changed status to the client, whose status has changed
-        if ( current_socket == ignore_socket )
+        if ( current_socket != ignore_socket )
         {
-            continue;
+            sendToClient( current_socket, Server_Code::changes_in_contact_list, changes);
         }
-        sendToClient( current_socket, Server_Code::changes_in_contact_list, changes);
+        else
+        {
+            //we don't send the changed status to the client, whose status has changed
+        }
     }
 }
 
@@ -268,13 +271,12 @@ void MessageProcessor::forwardMessageToRecipient( const QString& recipient, QTcp
     sendToClient( recipient_socket, Server_Code::message_to_recipient, message_json );
 }
 
-void MessageProcessor::calculateAndSetInClientMap( int number_from_client, QTcpSocket *socket )
+void MessageProcessor::calculateAndSaveClientSessionKey( int number_from_client, QTcpSocket *socket )
 {
     if ( clients_.contains( socket ) )
     {
         clients_[ socket ].session_key_object.calculateSessionKey( number_from_client );
-    }
-}
+    }}
 
 bool MessageProcessor::saveUserName( const QString& login, QTcpSocket *ClientSocket )
 {
@@ -289,7 +291,7 @@ bool MessageProcessor::saveUserName( const QString& login, QTcpSocket *ClientSoc
     }
 }
 
-std::optional< int > MessageProcessor::getIntermediatNumberBySocketFromMap( QTcpSocket *socket )
+std::optional< int > MessageProcessor::getClientIntermediateNumber( QTcpSocket *socket )
 {
     if ( clients_.contains( socket ) )
     {
@@ -301,12 +303,12 @@ std::optional< int > MessageProcessor::getIntermediatNumberBySocketFromMap( QTcp
     }
 }
 
-void MessageProcessor::secureSessionClientStep( const QJsonObject& obj, QTcpSocket* clientSocket )
+void MessageProcessor::secureSessionServerStep( const QJsonObject& obj, QTcpSocket* clientSocket )
 {
     int intermediate_number_from_client = obj.value( "first_step" ).toInt();
-    calculateAndSetInClientMap( intermediate_number_from_client, clientSocket );
+    calculateAndSaveClientSessionKey( intermediate_number_from_client, clientSocket );
 
-    if ( auto intermediate_number = getIntermediatNumberBySocketFromMap( clientSocket ); intermediate_number != std::nullopt )
+    if ( auto intermediate_number = getClientIntermediateNumber( clientSocket ); intermediate_number != std::nullopt )
     {
         const QJsonObject cur_object{ { "code", static_cast< int >( Server_Code::secure_session_server_step) }, { "second_step", intermediate_number.value() } };
         const QJsonDocument doc_encrypt( cur_object );
@@ -319,7 +321,7 @@ void MessageProcessor::secureSessionClientStep( const QJsonObject& obj, QTcpSock
 }
 
 int MessageProcessor::getUserSessionKey( QTcpSocket *socket )
-{    
+{
     if ( clients_.contains( socket ) )
     {
         auto user_info = clients_[socket];
@@ -336,7 +338,7 @@ int MessageProcessor::getUserSessionKey( QTcpSocket *socket )
 
 QByteArray MessageProcessor::cryptQByteArray ( const QByteArray& jByte, int key )
 {
-    std::vector< int > key_in_vector{ getVectorDigitsFromNumber( key ) };
+    std::vector< int > key_in_vector{ convertNumberIntoVectorOfItsDigits( key ) };
     const int vector_size = key_in_vector.size();
     int index{};
     QByteArray jByte_after_crypt;
@@ -376,10 +378,10 @@ QJsonObject MessageProcessor::decryptQJsonObjFromEncryptQString( const QString& 
     return obj;
 }
 
-std::vector<int>  MessageProcessor::getVectorDigitsFromNumber( int number )
+std::vector<int>  MessageProcessor::convertNumberIntoVectorOfItsDigits( int number )
 {
     int size{};
-    int ostatok{ 1 };
+    int remainder{ 1 };
     int temp{ number };
     while ( temp > 0 )
     {
@@ -390,20 +392,20 @@ std::vector<int>  MessageProcessor::getVectorDigitsFromNumber( int number )
     std::vector< int > number_in_vector;
     for ( int i = 0; i < size; ++i)
     {
-        ostatok = temp % 10;
+        remainder = temp % 10;
         temp = temp / 10;
-        number_in_vector.push_back( ostatok );
+        number_in_vector.push_back( remainder );
     }
     return number_in_vector;
 }
 
-QTcpSocket* MessageProcessor::getSocketIfRecipientConnected( const QString& recipient )
+QTcpSocket* MessageProcessor::getSocketIfUserIsAuthorized( const QString& login )
 {
     QTcpSocket *recipient_socket = nullptr;
 
     for ( QMap<QTcpSocket*, client_struct>::iterator it = clients_.begin(); it != clients_.end(); ++it )
     {
-        if (it.value().login == recipient)
+        if (it.value().login == login)
         {
             recipient_socket = it.key();
             break;
@@ -412,7 +414,7 @@ QTcpSocket* MessageProcessor::getSocketIfRecipientConnected( const QString& reci
     return recipient_socket;
 }
 
-std::pair<QString, QString> MessageProcessor::getCredentials(const QJsonObject& obj, QTcpSocket *clientSocket)
+std::pair<QString, QString> MessageProcessor::getClientCredentials(const QJsonObject& obj, QTcpSocket *clientSocket)
 {
     const QString encrypt_obj_inQString{ obj.value( "object" ).toString() };
     const QJsonObject decrypt_object{ decryptQJsonObjFromEncryptQString( encrypt_obj_inQString, clientSocket ) };

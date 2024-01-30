@@ -44,35 +44,34 @@ private:
     void authorizationRequest( const QJsonObject& obj, QTcpSocket *clientSocket );
 
     void readMessageToServer( const QJsonObject& obj, QTcpSocket* clientSocket );
-    void receiveMistake( const QJsonObject& obj, QTcpSocket* clientSocket );
+    void processReceivedMistake( const QJsonObject& obj, QTcpSocket* clientSocket );
 
-    void readAndForwardMessageToRecipient( const QJsonObject& obj, QTcpSocket* clientSocket );
+    void processMessageToAnotherClient( const QJsonObject& obj, QTcpSocket* clientSocket );
     void forwardMessageToRecipient( const QString& recipient, QTcpSocket* recipient_socket, const QJsonObject& messageObj );
 
-    void sendToClient( QTcpSocket *socket, const Server_Code cur_code );
-    void sendToClient( QTcpSocket *socket, const Server_Code cur_code, QJsonObject cur_object );
+    void sendToClient( QTcpSocket *socket, const Server_Code cur_code, QJsonObject received_object = {});
 
     void sendToClientContactList( QTcpSocket *socket );
-    void sendToAllClientsChangesInClients( const QJsonObject& changes, const QTcpSocket *ignore_socket );
+    void sendClientActivityUpdateToAllClients( const QJsonObject& changes, const QTcpSocket *ignored_socket );
 
     // is user online
-    QTcpSocket* getSocketIfRecipientConnected( const QString& recipient );
-    bool setActivityStatus( const QString& user, bool status );
+    QTcpSocket* getSocketIfUserIsAuthorized( const QString& login );
+    bool setClientActivityStatus( const QString& login, bool status );
 
-    void calculateAndSetInClientMap( int number_from_client, QTcpSocket *socket );
+    void calculateAndSaveClientSessionKey( int number_from_client, QTcpSocket *socket );
     bool saveUserName( const QString& login, QTcpSocket *ClientSocket );
 
-    std::pair<QString, QString> getCredentials(const QJsonObject& obj, QTcpSocket *clientSocket);
+    std::pair<QString, QString> getClientCredentials(const QJsonObject& obj, QTcpSocket *clientSocket);
 
     // secure session
-    std::optional< int > getIntermediatNumberBySocketFromMap( QTcpSocket *socket );
-    void secureSessionClientStep( const QJsonObject& obj, QTcpSocket* clientSocket );
+    std::optional< int > getClientIntermediateNumber( QTcpSocket *socket );
+    void secureSessionServerStep( const QJsonObject& obj, QTcpSocket* clientSocket );
 
     int getUserSessionKey( QTcpSocket *socket );
     QByteArray cryptQByteArray ( const QByteArray& jByte, int key );
     QString cryptQJsonObjAndPutItInQString( const QJsonObject& obj, QTcpSocket *socket );
     QJsonObject decryptQJsonObjFromEncryptQString( const QString& encrypt_QString, QTcpSocket *socket );
-    std::vector<int> getVectorDigitsFromNumber( int number );
+    std::vector<int> convertNumberIntoVectorOfItsDigits( int number );
 
     QMap< QTcpSocket*, client_struct > clients_;
     Database  myDatabase_;
