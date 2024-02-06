@@ -1,35 +1,35 @@
-#include "include/server.h"
+#include "include/ServerManager.h"
 #include "include/BackEnd.h"
 
 BackEnd::BackEnd( QObject *parent )
     : QObject{ parent }
-    , server_{ std::make_unique< Server >() }
+    , serverManager_{ std::make_unique< ServerManager >() }
 {
-    connect( server_.get(), &Server::gotNewMesssage_signal, this, &BackEnd::gotNewMesssage );
-    connect( server_.get(), &Server::smbConnected_signal, this, &BackEnd::smbConnectedToServer );
-    connect( server_.get(), &Server::smbDisconnected_signal, this, &BackEnd::smbDisconnectedFromServer );
+    connect( serverManager_.get(), &ServerManager::gotNewMesssage_signal, this, &BackEnd::gotNewMesssage );
+    connect( serverManager_.get(), &ServerManager::smbConnected_signal, this, &BackEnd::smbConnectedToServer );
+    connect( serverManager_.get(), &ServerManager::smbDisconnected_signal, this, &BackEnd::smbDisconnectedFromServer );
 }
 
 BackEnd::~BackEnd()
 {
-    disconnect( server_.get(), &Server::gotNewMesssage_signal, this, &BackEnd::gotNewMesssage );
-    disconnect( server_.get(), &Server::smbConnected_signal, this, &BackEnd::smbConnectedToServer );
-    disconnect( server_.get(), &Server::smbDisconnected_signal, this, &BackEnd::smbDisconnectedFromServer );
+    disconnect( serverManager_.get(), &ServerManager::gotNewMesssage_signal, this, &BackEnd::gotNewMesssage );
+    disconnect( serverManager_.get(), &ServerManager::smbConnected_signal, this, &BackEnd::smbConnectedToServer );
+    disconnect( serverManager_.get(), &ServerManager::smbDisconnected_signal, this, &BackEnd::smbDisconnectedFromServer );
 }
 
 QString BackEnd::startClicked()
 {
-    return server_->start();
+    return serverManager_->startServer();
 }
 
 QString BackEnd::stopClicked()
 {
-    return server_->stop();
+    return serverManager_->stopServer();
 }
 
 QString BackEnd::testConnectionClicked()
 {
-    return server_->showServerStatus();
+    return serverManager_->showServerStatus();
 }
 
 void BackEnd::smbConnectedToServer()

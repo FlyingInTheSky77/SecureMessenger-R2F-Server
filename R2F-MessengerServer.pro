@@ -6,6 +6,7 @@ SOURCES += \
         src/BackEnd.cpp \
         src/Database.cpp \
         src/MessageProcessor.cpp \
+        src/ServerManager.cpp \
         src/SessionKey.cpp \
         src/main.cpp \
         src/server.cpp
@@ -25,6 +26,7 @@ HEADERS += \
     include/BackEnd.h \
     include/Database.h \
     include/MessageProcessor.h \
+    include/ServerManager.h \
     include/SessionKey.h \
     include/messagecode.h \
     include/server.h \

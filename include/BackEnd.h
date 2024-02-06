@@ -1,6 +1,8 @@
 #pragma once
+
 #include "stdafx.h"
-#include "server.h"
+
+#include "ServerManager.h"
 
 class BackEnd : public QObject
 {
@@ -26,5 +28,5 @@ public slots:
     void gotNewMesssage( QString message );
 
 private:
-    std::unique_ptr< Server > server_;
+    std::unique_ptr< ServerManager > serverManager_;
 };
