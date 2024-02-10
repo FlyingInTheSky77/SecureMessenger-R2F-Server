@@ -7,6 +7,11 @@ MessageProcessor::MessageProcessor()
     : QObject()
     {}
 
+MessageProcessor::~MessageProcessor()
+{
+    clearClients();
+}
+
 void MessageProcessor::processIncomingMessages( const QJsonObject& obj, QTcpSocket* clientSocket )
 {
     const int message_code{ obj.value( "code" ).toInt() };
@@ -111,7 +116,14 @@ void MessageProcessor::sendClientsServerStoped()
 
 void MessageProcessor::clearClients()
 {
-    clients_.clear();
+    if (!clients_.isEmpty()) {
+        for (auto it = clients_.begin(); it != clients_.end(); ++it)
+        {            
+            delete it.key();
+        }
+        clients_.clear();
+    }
+
     myDatabase_.setActivityStatusAllUsersToFalse();
 }
 

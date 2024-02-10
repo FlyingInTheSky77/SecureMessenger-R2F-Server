@@ -24,6 +24,7 @@ class MessageProcessor: public QObject
 
 public:
     MessageProcessor();
+    ~MessageProcessor();
     void processIncomingMessages(const QJsonObject& obj, QTcpSocket* clientSocket);
     void processUserDisconnection(QTcpSocket* disconnected_user_socket);
 

@@ -27,7 +27,7 @@ QString ServerManager::startServer()
 
 QString ServerManager::stopServer()
 {
-    return server_->start();
+    return server_->stop();
 }
 
 QString ServerManager::showServerStatus()
