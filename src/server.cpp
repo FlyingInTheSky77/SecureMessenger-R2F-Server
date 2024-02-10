@@ -90,7 +90,7 @@ void Server::sendToClient( QTcpSocket *socket, const QByteArray jByte )
     qint64 bytesWritten = socket->write( jByte );
     if( bytesWritten == -1 )
     {
-        qDebug() << "Error writing to socket:" << socket->errorString();
+        qDebug() << __FILE__ << __LINE__ << "Error writing to socket:" << socket->errorString();
     }
     else
     {
