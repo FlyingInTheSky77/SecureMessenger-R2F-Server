@@ -28,7 +28,7 @@ void Server::disconnectSockets()
 {
     QList< QTcpSocket * > clientSocketsList = messageProcessor_->getClientSocketsList();
 
-    for (auto socket: clientSocketsList)
+    for ( auto socket: clientSocketsList )
     {
         disconnect( socket, &QTcpSocket::readyRead, this, &Server::readClient );
         disconnect( socket, &QTcpSocket::disconnected, this, &Server::gotDisconnection );
@@ -39,18 +39,18 @@ void Server::disconnectSockets()
 
 QString Server::start()
 {
-    QString startServerResult;
+    QString start_server_result;
     if ( !tcpServer_->listen( QHostAddress::Any, 5555 ) )
     {
-        startServerResult = tr( "Error: port is taken by some other service" );
+        start_server_result = tr( "Error: port is taken by some other service" );
     }
     else
     {
         connect( tcpServer_.get(), &QTcpServer::newConnection, this, &Server::newConnection );
-        startServerResult = tr( "Server started, port is openned");
+        start_server_result = tr( "Server started, port is openned");
     }
 
-    return startServerResult;
+    return start_server_result;
 }
 
 void Server::readClient()
@@ -66,6 +66,7 @@ void Server::readClient()
     else
     {
         const QJsonObject obj{ doc.object() };
+        emit recivedMessageFromClient_signal( obj, clientSocket ); // TODO implement subsequent logic in next steps
         messageProcessor_->processIncomingMessages( obj, clientSocket );
     }
 }
@@ -115,7 +116,7 @@ QString Server::stop()
     }
     else
     {
-        stopServerResult = tr( "Error: Server was not running");
+        stopServerResult = tr( "Error: Server was not running" );
     }
 
     return stopServerResult;

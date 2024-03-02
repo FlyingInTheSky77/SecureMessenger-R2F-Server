@@ -4,6 +4,7 @@ CONFIG += c++17
 
 SOURCES += \
         src/BackEnd.cpp \
+        src/ConnectedClientManager.cpp \
         src/Database.cpp \
         src/MessageProcessor.cpp \
         src/ServerManager.cpp \
@@ -24,6 +25,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     include/BackEnd.h \
+    include/ConnectedClientManager.h \
     include/Database.h \
     include/MessageProcessor.h \
     include/ServerManager.h \
