@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ConnectedClientManager.h"
 #include "Database.h"
 #include "messagecode.h"
 #include "SessionKey.h"
@@ -10,12 +11,6 @@
 #include <QList>
 
 #include <optional>
-
-struct client_struct
-{
-    SessionKey session_key_object;
-    QString login;
-};
 
 class MessageProcessor: public QObject
 {
@@ -74,6 +69,6 @@ private:
     QJsonObject decryptQJsonObjFromEncryptQString( const QString& encrypt_QString, QTcpSocket *socket );
     std::vector<int> convertNumberIntoVectorOfItsDigits( int number );
 
-    QMap< QTcpSocket*, client_struct > clients_;
-    Database  myDatabase_;
+    ConnectedClientManager connected_client_manager_;
+    Database user_credentials_database_;
 };
