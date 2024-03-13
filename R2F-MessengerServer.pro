@@ -2,6 +2,13 @@ QT += core quick network sql
 
 CONFIG += c++17
 
+CONFIG(debug, debug|release) {
+    QMAKE_CXXFLAGS += -fsanitize=address
+    QMAKE_LFLAGS += -fsanitize=address
+    QMAKE_CXXFLAGS += -c -Wthread-safety
+    QMAKE_LFLAGS += -c -Wthread-safety
+}
+
 SOURCES += \
         src/BackEnd.cpp \
         src/ConnectedClientManager.cpp \

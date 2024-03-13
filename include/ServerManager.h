@@ -36,11 +36,12 @@ signals:
 
 private:
     void threadFunction();
+    void done();
 
     std::unique_ptr< Server > server_;
     std::queue< std::pair< const QJsonObject, QTcpSocket* > > messageQueue_;
     std::mutex mutex_;
     std::condition_variable condition_;
-    std::atomic<bool> stop_flag_;
+    std::atomic<bool> done_;
     std::vector< std::thread > threads_;
 };
