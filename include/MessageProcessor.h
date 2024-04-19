@@ -14,7 +14,6 @@
 
 class MessageProcessor: public QObject
 {
-
     Q_OBJECT
 
 public:

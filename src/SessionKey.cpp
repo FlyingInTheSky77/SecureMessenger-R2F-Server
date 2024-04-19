@@ -1,4 +1,4 @@
-#include "include/SessionKey.h"
+#include "../include/SessionKey.h"
 
 SessionKey::SessionKey()
 {
@@ -15,6 +15,7 @@ SessionKey::SessionKey()
     mpz_get_str ( result_in_char_ptr, 10, intermediate_number_mpz_ );
     QString intermediat_in_QString ( result_in_char_ptr );
     intermediate_number_ = intermediat_in_QString.toInt();
+    delete[] result_in_char_ptr;
 }
 
 void SessionKey::calculateSessionKey( const int& intermediate_number_from_client )

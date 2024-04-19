@@ -1,4 +1,4 @@
-#include "include/Database.h"
+#include "../include/Database.h"
 
 #include <QSqlDatabase>
 #include <QSqlError>
@@ -34,6 +34,7 @@ static void createTable()
 }
 
 Database::Database()
+    : QObject()
 {
     connectToDatabase();
     createTable();
@@ -101,19 +102,19 @@ Identification_request Database::registration( const QString &login, const QStri
     if ( checkIfUserWithLoginExists( login ) )
     {
         registration_result.is_request_granted = false;
-        registration_result.message = QIODevice::tr( "User with this name is already registered" );
+        registration_result.message = tr( "User with this name is already registered" );
         qDebug() << __FILE__ << __LINE__ << "User with this name is already registered";
     }
     else if( query.exec( INSERT_USER.arg( QString::number( getCount() + 1 ) ).arg( login ).arg( password ).arg( false ) ) )
     {
         registration_result.is_request_granted = true;
-        registration_result.message = QIODevice::tr( "User registered successfully" );
+        registration_result.message = tr( "User registered successfully" );
         qDebug() << __FILE__ << __LINE__ << "User registered successfully";
     }
     else
     {
         registration_result.is_request_granted = false;
-        registration_result.message = QIODevice::tr( "User registeration error: technical errors on server" );
+        registration_result.message = tr( "User registeration error: technical errors on server" );
         qDebug() << __FILE__ << __LINE__ << "User registeration error: technical errors on server";
         qDebug() << __FILE__ << __LINE__ << "Error QSqlQuery: " + query.lastError().text();
     }
@@ -129,25 +130,25 @@ Identification_request Database::authorization(const QString &login, const QStri
     if( !query.exec( GET_PASSWORD.arg( login ) ) )
     {
         authorization_result.is_request_granted = false;
-        authorization_result.message = QIODevice::tr( "User authorization error" );
+        authorization_result.message = tr( "User authorization error" );
         return authorization_result;
     }
     query.next();
     if ( !query.isValid() )
     {
-        authorization_result.message = QIODevice::tr( "There are no clients with this login, the user is not authorized" );
+        authorization_result.message = tr( "There are no clients with this login, the user is not authorized" );
         authorization_result.is_request_granted = false;
         return authorization_result;
     }
     if ( query.value( 0 ).toString() == password )
     {
         setActivityStatus( login, true);
-        authorization_result.message = QIODevice::tr( "User is successfully authorized" );
+        authorization_result.message = tr( "User is successfully authorized" );
         authorization_result.is_request_granted = true;
     }
     else
     {
-        authorization_result.message = QIODevice::tr( "Passwords did not match, user is not logged in" );
+        authorization_result.message = tr( "Passwords did not match, user is not logged in" );
         authorization_result.is_request_granted = false;
     }
     return authorization_result;

@@ -1,4 +1,4 @@
-#include <include/MessageProcessor.h>
+#include "../include/MessageProcessor.h"
 
 MessageProcessor::MessageProcessor()
     : QObject()

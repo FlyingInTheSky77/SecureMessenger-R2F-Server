@@ -1,4 +1,5 @@
 #pragma once
+
 #include "stdafx.h"
 #include <QMap>
 #include <optional>
@@ -24,10 +25,16 @@ const QString GET_PASSWORD            = "SELECT password FROM users WHERE login 
 const QString CHECK_USER              = "SELECT EXISTS (SELECT login FROM users WHERE login = '%1');";
 const QString GET_ACTIVITY_AND_LOGINS = "SELECT login, activitystatus FROM users";
 
-class Database
+class Database: public QObject
 {
+    // In this case, we inherit from Q_OBJECT so that
+    // it is possible to use strings with the subsequent possibility
+    // of “translation” into other languages - tr.
+    Q_OBJECT
+
 public:
-    explicit Database();
+    Database();
+
     Identification_request registration( const QString &login, const QString& password );
     Identification_request authorization( const QString &login, const QString &password );
 
