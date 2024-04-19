@@ -1,4 +1,4 @@
-#include "include/ServerManager.h"
+#include "../include/ServerManager.h"
 
 ServerManager::ServerManager()
     : QObject()

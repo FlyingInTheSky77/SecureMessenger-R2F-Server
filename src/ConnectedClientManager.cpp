@@ -1,4 +1,4 @@
-#include "include/ConnectedClientManager.h"
+#include "../include/ConnectedClientManager.h"
 
 void ConnectedClientManager::addNewClientSocket( QTcpSocket *socket )
 {

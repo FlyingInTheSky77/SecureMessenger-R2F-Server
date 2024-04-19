@@ -1,5 +1,5 @@
-#include "include/Database.h"
-#include "include/server.h"
+#include "../include/Database.h"
+#include "../include/server.h"
 
 #include <memory>
 

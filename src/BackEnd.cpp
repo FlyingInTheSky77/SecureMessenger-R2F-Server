@@ -1,5 +1,5 @@
-#include "include/ServerManager.h"
-#include "include/BackEnd.h"
+#include "../include/ServerManager.h"
+#include "../include/BackEnd.h"
 
 BackEnd::BackEnd( QObject *parent )
     : QObject{ parent }
