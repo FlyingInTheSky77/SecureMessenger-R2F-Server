@@ -27,7 +27,7 @@ QString BackEnd::stopClicked()
     return serverManager_->stopServer();
 }
 
-QString BackEnd::testConnectionClicked()
+QString BackEnd::showServerStatusClicked()
 {
     return serverManager_->showServerStatus();
 }
