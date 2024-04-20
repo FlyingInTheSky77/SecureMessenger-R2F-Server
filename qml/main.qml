@@ -1,4 +1,4 @@
-import QtQuick 2.10
+﻿import QtQuick 2.10
 import QtQuick.Window 2.10
 import QtQuick.Controls 2.3
 import QtQuick.Layouts 1.3
@@ -11,7 +11,7 @@ Window
     minimumWidth: 500
     height: 450
     minimumHeight: 200
-    title: qsTr( "Road2Future Messanger - Server" )
+    title: qsTr( "Road2Future Messenger-Server" )
     color: "#CED0D4"
 
     BackEnd
@@ -19,15 +19,15 @@ Window
         id: backend
         onSmbConnected_signal:
         {
-            ti.append( addMsg( qsTr( "Somebody has connected" ) ) );
+            showNotification( qsTr( "Somebody has connected" ) );
         }
         onSmbDisconnected_signal:
         {
-            ti.append( addMsg( qsTr( "Somebody has disconnected" ) ) );
+            showNotification( qsTr( "Somebody has disconnected" ) );
         }
         onNewMessage_signal:
         {
-            ti.append( addMsg( message ) );
+            showNotification( message );
         }
     }
 
@@ -37,28 +37,26 @@ Window
         anchors.margins: 10
         RowLayout
         {
-            anchors.horizontalCenter: parent.horizontalCenter
+            Layout.alignment: Qt.AlignHCenter
             BetterButton
             {
                 id: btn_start
-                anchors.left: parent.left
                 text: qsTr( "Start server" )
                 color: enabled ? this.down ? "#78C37F" : "#87DB8D" : "gray"
                 onClicked:
                 {
-                    ti.append( addMsg( backend.startClicked() ) );
+                    showNotification( backend.startClicked() );
                     this.enabled = false;
                 }
             }
             BetterButton
             {
                 enabled: !btn_start.enabled
-                anchors.right: parent.right
                 text: qsTr( "Stop server" )
                 color: enabled ? this.down ? "#DB7A74" : "#FF7E79" : "gray"                
                 onClicked:
                 {
-                    ti.append( addMsg( backend.stopClicked() ) );
+                    showNotification( backend.stopClicked() );
                     btn_start.enabled = true;
                 }
             }
@@ -72,7 +70,7 @@ Window
                 anchors.fill: parent
                 TextArea
                 {
-                    id: ti
+                    id: textArea
                     readOnly: true
                     selectByMouse : true
                     font.pixelSize: 14
@@ -82,25 +80,31 @@ Window
         }
         BetterButton
         {
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: qsTr( "Test connection" )
+            Layout.alignment: Qt.AlignHCenter
+            text: qsTr( "Server status" )
             color: this.down ? "#6FA3D2" : "#7DB7E9"
             border.color: "#6FA3D2"
             onClicked:
             {
-                ti.append( addMsg( backend.testConnectionClicked() ) );
+                showNotification( backend.showServerStatusClicked() );
             }
         }
     }
 
     Component.onCompleted:
     {
-        ti.text = addMsg( qsTr( "R2F-Messanger-Server started\n- - - - - -" ) );
+        showNotification( qsTr( "R2F-Messenger-Server program started" ) );
     }
 
-    function addMsg( someText )
+    function showNotification( notification ) {
+        textArea.append( addTimeToNotification( notification ) );
+        // to always show the last notification in case TextArea is filled:
+        textArea.cursorPosition = textArea.length;  // automatic ScrollDown
+    }
+
+    function addTimeToNotification( notification )
     {
-        return "[" + currentTime() + "] " + someText;
+        return "[" + currentTime() + "] " + notification;
     }
 
     function currentTime()

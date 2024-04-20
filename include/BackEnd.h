@@ -15,7 +15,7 @@ public:
     // called from the qml layer:
     Q_INVOKABLE QString stopClicked();
     Q_INVOKABLE QString startClicked();
-    Q_INVOKABLE QString testConnectionClicked();
+    Q_INVOKABLE QString showServerStatusClicked();
 
 signals:
     void smbConnected_signal();
