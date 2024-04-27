@@ -3,6 +3,7 @@ import QtQuick.Window 2.10
 import QtQuick.Controls 2.3
 import QtQuick.Layouts 1.3
 import io.qt.BackEnd 1.0
+import io.qt.TcpDumpManager 1.0
 
 Window
 {
@@ -30,6 +31,7 @@ Window
             showNotification( message );
         }
     }
+
 
     ColumnLayout
     {
@@ -87,6 +89,26 @@ Window
             onClicked:
             {
                 showNotification( backend.showServerStatusClicked() );
+            }
+        }
+
+        TcpDumpManager {
+                id: tcpDumpManager
+                onTcppackage_signal:
+                {
+                    showNotification( new_package );
+                }
+            }
+
+        BetterButton
+        {
+            Layout.alignment: Qt.AlignHCenter
+            text: qsTr( "Server network analysis" )
+            color: this.down ? "#6FA3D2" : "#7DB7E9"
+            border.color: "#6FA3D2"
+            onClicked:
+            {
+                tcpDumpManager.startTcpDump()
             }
         }
     }
