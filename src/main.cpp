@@ -1,6 +1,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include "../include/BackEnd.h"
+#include "../include/TcpDumpManager.h"
 
 int main( int argc, char *argv[] )
 {
@@ -8,7 +9,7 @@ int main( int argc, char *argv[] )
     QGuiApplication app( argc, argv );
 
     qmlRegisterType< BackEnd >( "io.qt.BackEnd", 1, 0, "BackEnd" );
-
+    qmlRegisterType< TcpDumpManager >( "io.qt.TcpDumpManager", 1, 0, "TcpDumpManager" );
     QQmlApplicationEngine engine;
 
     const QUrl url( QStringLiteral( "qrc:/qml/main.qml" ) );
