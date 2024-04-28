@@ -5,6 +5,8 @@
 
 #include <memory>
 
+#include "PacketAnalyzer.h"
+
 class TcpDumpManager : public QObject
 {
     Q_OBJECT
@@ -25,4 +27,5 @@ signals:
 
 private:
     std::unique_ptr< QProcess > tcpDumpProcess_ptr_;
+    std::unique_ptr< PacketAnalyzer > PacketAnalyzer_ptr_;
 };

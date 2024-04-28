@@ -25,6 +25,7 @@ add_executable(R2F-MessengerServer
     include/stdafx.h
     include/messagecode.h
     include/TcpDumpManager.h
+    include/PacketAnalyzer.h
 
     src/BackEnd.cpp
     src/ConnectedClientManager.cpp
@@ -35,6 +36,7 @@ add_executable(R2F-MessengerServer
     src/main.cpp
     src/server.cpp
     src/TcpDumpManager.cpp
+    src/PacketAnalyzer.cpp
 
     ${QT_RESOURCES}
 )

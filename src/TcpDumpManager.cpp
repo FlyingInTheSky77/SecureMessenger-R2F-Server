@@ -49,14 +49,17 @@ void TcpDumpManager::startTcpDump()
     connect(tcpDumpProcess_ptr_.get(), &QProcess::stateChanged, this, [](QProcess::ProcessState newState) {
         qDebug() << "Process state changed to:" << newState;
     });
+
+    PacketAnalyzer_ptr_ = std::make_unique< PacketAnalyzer >();
 }
 
 void TcpDumpManager::readTcpDumpOutput()
 {
     QByteArray data = tcpDumpProcess_ptr_ -> readAllStandardOutput();
     QString output = QString::fromUtf8(data);
+    QString packet_type = PacketAnalyzer_ptr_ -> analyze( output );
 
-    emit tcppackage_signal( output );
+    emit tcppackage_signal( " == Packet_type == " + packet_type + '\n' + output );
 }
 
 void TcpDumpManager::processError( QProcess::ProcessError error )
