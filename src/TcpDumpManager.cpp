@@ -8,11 +8,13 @@ TcpDumpManager::TcpDumpManager(QObject *parent) : QObject(parent)
 
 void TcpDumpManager::startTcpDump()
 {
-    if ( !tcpDumpProcess_ptr_ ) {
+    if ( !tcpDumpProcess_ptr_ )
+    {
         tcpDumpProcess_ptr_ = std::make_unique< QProcess >();
         qDebug() << "tcpDumpProcess is starting ";
     }
-    else {
+    else
+    {
         qDebug() << "tcpDumpProcess already started";
     }
 
@@ -50,16 +52,21 @@ void TcpDumpManager::startTcpDump()
         qDebug() << "Process state changed to:" << newState;
     });
 
-    PacketAnalyzer_ptr_ = std::make_unique< PacketAnalyzer >();
+    if ( !packetAnalyzer_ptr_ )
+    {
+        packetAnalyzer_ptr_ = std::make_unique< PacketAnalyzer >();
+    }
 }
 
 void TcpDumpManager::readTcpDumpOutput()
 {
     QByteArray data = tcpDumpProcess_ptr_ -> readAllStandardOutput();
     QString output = QString::fromUtf8(data);
-    QString packet_type = PacketAnalyzer_ptr_ -> analyze( output );
 
-    emit tcppackage_signal( " == Packet_type == " + packet_type + '\n' + output );
+    QString extended_output = packetAnalyzer_ptr_ -> analyze( output );
+
+    emit tcppackage_signal( output );
+    emit classifyPacket_signal ( extended_output );
 }
 
 void TcpDumpManager::processError( QProcess::ProcessError error )
