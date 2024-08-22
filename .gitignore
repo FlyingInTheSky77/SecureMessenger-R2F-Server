@@ -72,3 +72,8 @@ Thumbs.db
 # --------
 *.dll
 *.exe
+
+# pybind11
+third_party/
+
+CMakeLists.txt.user
