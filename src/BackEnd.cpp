@@ -1,10 +1,16 @@
+#include <QString>
+
 #include "../include/ServerManager.h"
 #include "../include/BackEnd.h"
 
-BackEnd::BackEnd( QObject *parent )
+BackEnd::BackEnd( std::shared_ptr< ILogger > logger, QObject *parent )
     : QObject{ parent }
     , serverManager_{ std::make_unique< ServerManager >() }
+    , logger_( logger )
 {
+    serverManager_->startServer();
+    qDebug() << "Server started";
+
     connect( serverManager_.get(), &ServerManager::gotNewMesssage_signal, this, &BackEnd::gotNewMesssage );
     connect( serverManager_.get(), &ServerManager::smbConnected_signal, this, &BackEnd::smbConnectedToServer );
     connect( serverManager_.get(), &ServerManager::smbDisconnected_signal, this, &BackEnd::smbDisconnectedFromServer );
@@ -15,34 +21,24 @@ BackEnd::~BackEnd()
     disconnect( serverManager_.get(), &ServerManager::gotNewMesssage_signal, this, &BackEnd::gotNewMesssage );
     disconnect( serverManager_.get(), &ServerManager::smbConnected_signal, this, &BackEnd::smbConnectedToServer );
     disconnect( serverManager_.get(), &ServerManager::smbDisconnected_signal, this, &BackEnd::smbDisconnectedFromServer );
-}
 
-QString BackEnd::startClicked()
-{
-    return serverManager_->startServer();
-}
-
-QString BackEnd::stopClicked()
-{
-    return serverManager_->stopServer();
-}
-
-QString BackEnd::showServerStatusClicked()
-{
-    return serverManager_->showServerStatus();
+    serverManager_->stopServer();
+    qDebug() << "Server stoped";
 }
 
 void BackEnd::smbConnectedToServer()
 {
-    emit smbConnected_signal();
+    qDebug() << "somebody connected";
+    qDebug() << serverManager_->showServerStatus();
 }
 
 void BackEnd::smbDisconnectedFromServer()
 {    
-    emit smbDisconnected_signal();
+    qDebug() << "somebody connected";
+    qDebug() << serverManager_->showServerStatus();
 }
 
 void BackEnd::gotNewMesssage( QString message )
 {
-    emit newMessage_signal( message );
+    qDebug() << "new message to server: " << message;
 }

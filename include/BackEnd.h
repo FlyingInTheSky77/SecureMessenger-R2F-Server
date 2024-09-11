@@ -3,24 +3,15 @@
 #include "stdafx.h"
 
 #include "ServerManager.h"
+#include "Logger.h"
 
 class BackEnd : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit BackEnd( QObject *parent = nullptr );
+    explicit BackEnd( std::shared_ptr< ILogger > logger = nullptr, QObject *parent = nullptr );
     ~BackEnd();
-
-    // called from the qml layer:
-    Q_INVOKABLE QString stopClicked();
-    Q_INVOKABLE QString startClicked();
-    Q_INVOKABLE QString showServerStatusClicked();
-
-signals:
-    void smbConnected_signal();
-    void smbDisconnected_signal();
-    void newMessage_signal( QString message );
 
 public slots:
     void smbConnectedToServer();
@@ -29,4 +20,5 @@ public slots:
 
 private:
     std::unique_ptr< ServerManager > serverManager_;
+    std::shared_ptr< ILogger > logger_;
 };

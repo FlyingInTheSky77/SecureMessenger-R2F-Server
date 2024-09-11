@@ -10,14 +10,13 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
 
-find_package(Qt5 COMPONENTS Core Quick Network Sql REQUIRED)
-
-qt5_add_resources(QT_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/qml.qrc)
+find_package(Qt5 COMPONENTS Core Network Sql REQUIRED)
 
 add_executable(R2F-MessengerServer
     include/BackEnd.h
     include/ConnectedClientManager.h
     include/Database.h
+    include/Logger.h
     include/MessageProcessor.h
     include/ServerManager.h
     include/SessionKey.h
@@ -45,7 +44,6 @@ target_link_options(R2F-MessengerServer PRIVATE -v)
 
 target_link_libraries(R2F-MessengerServer PRIVATE
     Qt5::Core
-    Qt5::Quick
     Qt5::Network
     Qt5::Sql
 )
