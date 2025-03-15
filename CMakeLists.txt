@@ -6,11 +6,33 @@ project(
     LANGUAGES CXX
 )
 
+if(${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
+    message(STATUS "Configuring for FreeBSD")
+endif()
+
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    message(STATUS "Configuring for Linux")
+endif()
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
 
 find_package(Qt5 COMPONENTS Core Network Sql REQUIRED)
+
+find_path(GMP_INCLUDE_DIR NAMES gmp.h
+  PATHS /usr/local/include /usr/include
+)
+
+find_library(GMP_LIBRARY NAMES gmp
+  PATHS /usr/local/lib /usr/lib
+)
+
+if (GMP_INCLUDE_DIR AND GMP_LIBRARY)
+  message(STATUS "GMP found")
+else()
+  message(FATAL_ERROR "GMP not found")
+endif()
 
 add_executable(R2F-MessengerServer
     include/BackEnd.h
@@ -59,9 +81,12 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
     )
 endif()
 
+target_include_directories(R2F-MessengerServer PRIVATE ${GMP_INCLUDE_DIR})
 target_link_libraries(R2F-MessengerServer PRIVATE
-    gmp
+   ${GMP_LIBRARY}
 )
+
+target_link_libraries(R2F-MessengerServer PRIVATE ${CMAKE_THREAD_LIBS_INIT})
 
 set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/../build")
 install(TARGETS R2F-MessengerServer)
