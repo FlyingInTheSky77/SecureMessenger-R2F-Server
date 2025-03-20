@@ -2,6 +2,9 @@
 
 #include "server.h"
 
+#include <QJsonObject>
+#include <QTcpSocket>
+
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
@@ -10,15 +13,12 @@
 #include <thread>
 #include <vector>
 
-#include <QJsonObject>
-#include <QTcpSocket>
-
 class ServerManager: public QObject
 {
     Q_OBJECT
 
 public:
-    ServerManager();
+    explicit ServerManager( QObject *parent = nullptr );
     ~ServerManager();
     QString startServer();
     QString stopServer();
@@ -31,7 +31,7 @@ public slots:
 
 signals:
     void smbConnected_signal();
-    void gotNewMesssage_signal( QString msg );
+    void gotNewMesssage_signal( QString message );
     void smbDisconnected_signal();
 
 private:

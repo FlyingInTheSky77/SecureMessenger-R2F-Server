@@ -1,11 +1,8 @@
-#include "../include/Database.h"
+#include "Database.h"
 
 #include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
-#include <QSqlQueryModel>
-
-#include <optional>
 
 static void connectToDatabase()
 {
@@ -33,8 +30,8 @@ static void createTable()
     qDebug() << __FILE__ << __LINE__ << "Table is created";
 }
 
-Database::Database()
-    : QObject()
+Database::Database( QObject *parent )
+    : QObject( parent )
 {
     connectToDatabase();
     createTable();

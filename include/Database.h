@@ -1,13 +1,8 @@
 #pragma once
 
-#include "stdafx.h"
-#include <QMap>
-#include <optional>
+#include <QJsonObject>
 
-#include <QSqlDatabase>
-#include <QSqlError>
-#include <QSqlQuery>
-#include <QSqlQueryModel>
+#include <optional>
 
 struct Identification_request
 {
@@ -33,7 +28,8 @@ class Database: public QObject
     Q_OBJECT
 
 public:
-    Database();
+    explicit Database( QObject *parent = nullptr );
+    ~Database() {}
 
     Identification_request registration( const QString &login, const QString& password );
     Identification_request authorization( const QString &login, const QString &password );

@@ -36,6 +36,7 @@ endif()
 
 add_executable(R2F-MessengerServer
     include/BackEnd.h
+    include/CommandLineOptions.h
     include/ConnectedClientManager.h
     include/Database.h
     include/Logger.h
@@ -43,12 +44,12 @@ add_executable(R2F-MessengerServer
     include/ServerManager.h
     include/SessionKey.h
     include/server.h
-    include/stdafx.h
     include/messagecode.h
     include/TcpDumpManager.h
     include/PacketAnalyzer.h
 
     src/BackEnd.cpp
+    src/CommandLineOptions.cpp
     src/ConnectedClientManager.cpp
     src/Database.cpp
     src/MessageProcessor.cpp
@@ -58,8 +59,6 @@ add_executable(R2F-MessengerServer
     src/server.cpp
     src/TcpDumpManager.cpp
     src/PacketAnalyzer.cpp
-
-    ${QT_RESOURCES}
 )
 
 target_link_options(R2F-MessengerServer PRIVATE -v)
@@ -81,7 +80,10 @@ if(CMAKE_BUILD_TYPE MATCHES "Debug")
     )
 endif()
 
-target_include_directories(R2F-MessengerServer PRIVATE ${GMP_INCLUDE_DIR})
+target_include_directories(R2F-MessengerServer PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${GMP_INCLUDE_DIR}
+)
 target_link_libraries(R2F-MessengerServer PRIVATE
    ${GMP_LIBRARY}
 )

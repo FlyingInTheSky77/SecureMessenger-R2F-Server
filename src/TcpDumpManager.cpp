@@ -1,4 +1,4 @@
-#include "../include/TcpDumpManager.h"
+#include "TcpDumpManager.h"
 
 #include <QDebug>
 
