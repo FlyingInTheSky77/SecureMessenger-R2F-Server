@@ -1,11 +1,11 @@
 #pragma once
 
+#include "PacketAnalyzer.h"
+
 #include <QObject>
 #include <QProcess>
 
 #include <memory>
-
-#include "PacketAnalyzer.h"
 
 class TcpDumpManager : public QObject
 {

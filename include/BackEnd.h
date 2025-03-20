@@ -1,9 +1,7 @@
 #pragma once
 
-#include "stdafx.h"
-
-#include "ServerManager.h"
 #include "Logger.h"
+#include "ServerManager.h"
 
 class BackEnd : public QObject
 {

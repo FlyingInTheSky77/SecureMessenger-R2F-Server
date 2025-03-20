@@ -1,4 +1,6 @@
-#include "../include/SessionKey.h"
+#include "SessionKey.h"
+
+#include <QString>
 
 SessionKey::SessionKey()
 {

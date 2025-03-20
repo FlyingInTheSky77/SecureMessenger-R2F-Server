@@ -1,7 +1,7 @@
-#include "../include/ServerManager.h"
+#include "ServerManager.h"
 
-ServerManager::ServerManager()
-    : QObject()
+ServerManager::ServerManager(QObject *parent)
+    : QObject( parent )
     , server_( std::make_unique< Server >() )
     , done_ ( false )
 {

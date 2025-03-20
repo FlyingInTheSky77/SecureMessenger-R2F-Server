@@ -1,8 +1,11 @@
-#include "../include/MessageProcessor.h"
+#include "MessageProcessor.h"
 
-MessageProcessor::MessageProcessor()
-    : QObject()
-    {}
+#include <QCryptographicHash>
+#include <QJsonParseError>
+
+MessageProcessor::MessageProcessor(QObject *parent)
+    : QObject( parent )
+{}
 
 MessageProcessor::~MessageProcessor()
 {

@@ -6,7 +6,6 @@
 #include "SessionKey.h"
 
 #include <QTcpSocket>
-#include <QCryptographicHash>
 #include <QJsonObject>
 #include <QList>
 
@@ -17,7 +16,7 @@ class MessageProcessor: public QObject
     Q_OBJECT
 
 public:
-    MessageProcessor();
+    explicit MessageProcessor(QObject *parent = nullptr);
     ~MessageProcessor();
     void processIncomingMessages(const QJsonObject& obj, QTcpSocket* clientSocket);
     void processUserDisconnection(QTcpSocket* disconnected_user_socket);

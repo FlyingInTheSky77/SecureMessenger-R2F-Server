@@ -1,9 +1,9 @@
-#include "../include/PacketAnalyzer.h"
+#include "PacketAnalyzer.h"
 
 #include <QDebug>
-#include <regex>
-#include <iostream>
 
+#include <iostream>
+#include <regex>
 
 std::vector<std::string> PacketAnalyzer::splitPackets(const std::string& packets) {
     std::vector<std::string> packet_list;

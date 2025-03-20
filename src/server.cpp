@@ -1,5 +1,7 @@
-#include "../include/Database.h"
-#include "../include/server.h"
+#include "Database.h"
+#include "server.h"
+
+#include <QJsonParseError>
 
 #include <memory>
 

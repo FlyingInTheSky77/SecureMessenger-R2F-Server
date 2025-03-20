@@ -1,12 +1,11 @@
 #pragma once
 
-#include "stdafx.h"
 #include "messagecode.h"
 #include "MessageProcessor.h"
 
+#include <QJsonObject>
 #include <QTcpServer>
 #include <QTcpSocket>
-#include <QJsonObject>
 
 class Server: public QObject
 {
