@@ -2,14 +2,12 @@
 
 #include <QString>
 
-BackEnd::BackEnd( std::shared_ptr< ILogger > logger, QObject *parent )
+BackEnd::BackEnd( QObject *parent )
     : QObject( parent )
     , serverManager_( std::make_unique< ServerManager >() )
-    , logger_( logger )
 {
     serverManager_->startServer();
     qDebug() << "Server started";
-    logger_->log(LogLevel::INFO, "Server started");
 
     connect( serverManager_.get(), &ServerManager::gotNewMesssage_signal, this, &BackEnd::gotNewMesssage );
     connect( serverManager_.get(), &ServerManager::smbConnected_signal, this, &BackEnd::smbConnectedToServer );

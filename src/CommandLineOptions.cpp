@@ -3,20 +3,20 @@
 #include <QDebug>
 
 CommandLineOptions::CommandLineOptions() {
-    parser.setApplicationDescription("QCommandLineParser");
-    parser.addHelpOption();
+    parser_.setApplicationDescription("QCommandLineParser");
+    parser_.addHelpOption();
 
-    parser.addOption({{"n", "no-log"}, "Disable logging."});
-    parser.addOption({{"c", "console-log"}, "Log to console."});
-    parser.addOption({{"f", "file-log"}, "Log to file."});
+    parser_.addOption({{"n", "no-log"}, "Disable logging."});
+    parser_.addOption({{"c", "console-log"}, "Log to console."});
+    parser_.addOption({{"f", "file-log"}, "Log to file."});
 
-    parser.process(QCoreApplication::arguments());
+    parser_.process(QCoreApplication::arguments());
 }
 
 void CommandLineOptions::parse() {
-    const bool noLog = parser.isSet("no-log");
-    const bool consoleLog = parser.isSet("console-log");
-    const bool fileLog = parser.isSet("file-log");
+    const bool noLog = parser_.isSet("no-log");
+    const bool consoleLog = parser_.isSet("console-log");
+    const bool fileLog = parser_.isSet("file-log");
 
     const int8_t selectedOptions = noLog + consoleLog + fileLog;
 
@@ -50,14 +50,7 @@ void CommandLineOptions::parse() {
     }
 }
 
-std::shared_ptr<ILogger> CommandLineOptions::createLogger() const {
-    if (logOption_ == LogOption::NoLog) {
-        return nullptr;
-    } else if (logOption_ == LogOption::FileLog) {        
-        return std::make_shared<FileLogger>();
-    } else if (logOption_ == LogOption::ConsoleLog) {
-        return std::make_shared<ConsoleLogger>();
-    } else {
-        return nullptr;
-    }
+LogOption CommandLineOptions::getLogOption()
+{
+    return logOption_;
 }

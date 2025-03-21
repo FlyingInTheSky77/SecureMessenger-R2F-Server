@@ -4,6 +4,7 @@
 #include <ctime>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <sys/stat.h>
@@ -28,8 +29,24 @@ public:
     }
 };
 
+class NullLogger : public ILogger {
+public:
+    static std::shared_ptr<NullLogger> instance() {
+        static std::shared_ptr<NullLogger> instance(new NullLogger());
+        return instance;
+    }
+
+    void log(LogLevel, const std::string&) override {
+        // no logging
+    }
+};
+
 class ConsoleLogger : public ILogger {
 public:
+    static std::shared_ptr<ConsoleLogger> instance() {
+        static std::shared_ptr<ConsoleLogger> logger(new ConsoleLogger());
+        return logger;
+    }
     void log(LogLevel level, const std::string& message) override {
         std::string levelStr = logLevelToString(level);
         std::lock_guard lock(mutex_);
@@ -37,11 +54,34 @@ public:
     }
 
 private:
+    ConsoleLogger() {}
     std::mutex mutex_;
 };
 
 class FileLogger : public ILogger {
 public:
+    static std::shared_ptr<FileLogger> instance() {
+        static std::shared_ptr<FileLogger> logger(new FileLogger());
+        return logger;
+    }
+    ~FileLogger() {
+        if (file_.is_open()) {
+            file_.close();
+        }
+    }
+
+    void log(LogLevel level, const std::string& message) override {
+        std::lock_guard lock(mutex_);
+        if (file_.is_open()) {
+            std::string levelStr = logLevelToString(level);
+            file_ << "[" << levelStr << "] " << message << std::endl;
+            file_.flush();
+        }
+        else {
+            std::cerr << "Error opening log file " << std::endl;
+        }
+    }
+private:
     explicit FileLogger()
     {
         auto now = std::chrono::system_clock::now();
@@ -63,26 +103,7 @@ public:
             std::cerr << "Error opening log file: " << logFileName << std::endl;
         }
     }
-    ~FileLogger() {
-        if (file_.is_open()) {
-            file_.close();
-        }
-    }
 
-    void log(LogLevel level, const std::string& message) override {
-        std::lock_guard lock(mutex_);
-        if (file_.is_open()) {
-            std::string levelStr = logLevelToString(level);
-            file_ << "[" << levelStr << "] " << message << std::endl;
-            file_.flush();
-        }
-        else {
-            std::cerr << "Error opening log file " << std::endl;
-        }
-    }
-private:
     std::ofstream file_;
     std::mutex mutex_;
 };
-
-
