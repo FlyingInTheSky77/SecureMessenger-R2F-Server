@@ -8,7 +8,7 @@ class BackEnd : public QObject
     Q_OBJECT
 
 public:
-    explicit BackEnd( std::shared_ptr< ILogger > logger = nullptr, QObject *parent = nullptr );
+    explicit BackEnd( QObject *parent = nullptr );
     ~BackEnd();
 
 public slots:
@@ -18,5 +18,4 @@ public slots:
 
 private:
     std::unique_ptr< ServerManager > serverManager_;
-    std::shared_ptr< ILogger > logger_;
 };

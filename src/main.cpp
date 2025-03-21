@@ -1,6 +1,6 @@
 #include "BackEnd.h"
 #include "CommandLineOptions.h"
-#include "Logger.h"
+#include "LoggerFactory.h"
 #include "TcpDumpManager.h"
 
 #include <QCoreApplication>
@@ -14,9 +14,10 @@ int main( int argc, char *argv[] )
     CommandLineOptions options;
     options.parse();
 
-    std::shared_ptr< ILogger > logger = options.createLogger();
+    LoggerFactory::setLoggerType(options.getLogOption());
+    log(LogLevel::INFO, "R2F-MessengerServer started");
 
-    BackEnd backEnd( logger );
+    BackEnd backEnd;
 
     return app.exec();
 }

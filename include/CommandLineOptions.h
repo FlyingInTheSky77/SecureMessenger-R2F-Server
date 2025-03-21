@@ -12,9 +12,9 @@ class CommandLineOptions {
 public:
     explicit CommandLineOptions();
     void parse();
-    std::shared_ptr<ILogger> createLogger() const;
+    LogOption getLogOption();
 
 private:
-    QCommandLineParser parser;
+    QCommandLineParser parser_;
     LogOption logOption_;
 };

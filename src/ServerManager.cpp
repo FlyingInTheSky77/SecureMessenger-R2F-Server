@@ -41,6 +41,7 @@ ServerManager::~ServerManager()
 
 QString ServerManager::startServer()
 {
+    qDebug() << "Server started";
     return server_->start();
 }
 

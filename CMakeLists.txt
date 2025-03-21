@@ -40,6 +40,7 @@ add_executable(R2F-MessengerServer
     include/ConnectedClientManager.h
     include/Database.h
     include/Logger.h
+    include/LoggerFactory.h
     include/MessageProcessor.h
     include/ServerManager.h
     include/SessionKey.h
