@@ -53,6 +53,8 @@ add_executable(R2F-MessengerServer
     src/CommandLineOptions.cpp
     src/ConnectedClientManager.cpp
     src/Database.cpp
+    src/Logger.cpp
+    src/LoggerFactory.cpp
     src/MessageProcessor.cpp
     src/ServerManager.cpp
     src/SessionKey.cpp

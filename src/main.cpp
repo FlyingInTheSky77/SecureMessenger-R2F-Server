@@ -15,7 +15,7 @@ int main( int argc, char *argv[] )
     options.parse();
 
     LoggerFactory::setLoggerType(options.getLogOption());
-    log(LogLevel::INFO, "R2F-MessengerServer started");
+    logInfo << "R2F-MessengerServer started";
 
     BackEnd backEnd;
 

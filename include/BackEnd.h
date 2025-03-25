@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Logger.h"
+#include "LoggerFactory.h"
 #include "ServerManager.h"
 
 class BackEnd : public QObject
