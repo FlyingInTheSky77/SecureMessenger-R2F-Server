@@ -7,7 +7,7 @@ BackEnd::BackEnd( QObject *parent )
     , serverManager_( std::make_unique< ServerManager >() )
 {
     serverManager_->startServer();
-    qDebug() << "Server started";
+    logDebug << "BackEnd ctr";
 
     connect( serverManager_.get(), &ServerManager::gotNewMesssage_signal, this, &BackEnd::gotNewMesssage );
     connect( serverManager_.get(), &ServerManager::smbConnected_signal, this, &BackEnd::smbConnectedToServer );

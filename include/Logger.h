@@ -1,7 +1,6 @@
 #pragma once
 
 #include <chrono>
-#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -12,8 +11,12 @@
 enum class LogLevel {
     INFO,
     WARNING,
-    ERROR
+    ERROR,
+    DEBUG
 };
+
+std::string getLogTimestamp();
+std::string getCurrentTime();
 
 class ILogger {
 public:
@@ -21,10 +24,11 @@ public:
     virtual void log(LogLevel level, const std::string& message) = 0;
     std::string logLevelToString(LogLevel level) {
         switch (level) {
-            case LogLevel::INFO:    return "INFO";
-            case LogLevel::WARNING: return "WARNING";
-            case LogLevel::ERROR:   return "ERROR";
-            default:                return "UNKNOWN";
+            case LogLevel::INFO:    return "  INFO   ";
+            case LogLevel::WARNING: return " WARNING ";
+            case LogLevel::ERROR:   return "  ERROR  ";
+            case LogLevel::DEBUG:   return "  DEBUG  ";
+            default:                return " UNKNOWN ";
         }
     }
 };
@@ -94,9 +98,8 @@ private:
 
         file_.open(logFileName, std::ios::app);
         if (file_.is_open()) {
-            std::lock_guard lock(mutex_);
             chmod(logFileName.c_str(), 0666);
-            file_ << "Log started at " << timestamp << "\n";
+            file_ << "[  START  ] " << getLogTimestamp() << "Log started just now \n";
             file_.flush();
         }
         else {
