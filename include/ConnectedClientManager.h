@@ -21,18 +21,18 @@ public:
     bool saveUserName( const QString& login, QTcpSocket *ClientSocket );
 
     void calculateAndSaveClientSessionKey( int number_from_client, QTcpSocket *socket );
-    std::optional< int > getClientIntermediateNumber( QTcpSocket *socket );
-    int getUserSessionKey( QTcpSocket *socket );
+    std::optional< int > getClientIntermediateNumber( QTcpSocket *socket ) const;
+    int getUserSessionKey( QTcpSocket *socket ) const;
 
-    int getNumberConnectedClients();
+    int getNumberConnectedClients() const;
     QString getUserLogin( QTcpSocket *socket );
     QTcpSocket* getSocketIfUserIsAuthorized( const QString& login );
-    QList < QTcpSocket* > getClientSocketsList();
+    QList < QTcpSocket* > getClientSocketsList() const;
 
     void removeUser( QTcpSocket* disconnected_user_socket );
     void clearClients();
 
 private:
     QMap< QTcpSocket*, ClientsSessionsInfo > clients_;
-    std::mutex mutex_;
+    mutable std::mutex mutex_;
 };

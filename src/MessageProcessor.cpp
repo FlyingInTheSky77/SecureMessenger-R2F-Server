@@ -219,8 +219,13 @@ void MessageProcessor::processMessageToAnotherClient( const QJsonObject& obj, QT
     else
     {
         const QString recipient{ decrypt_object.value( "recipient" ).toString() };
-
         QTcpSocket* recipient_socket = getSocketIfUserIsAuthorized( recipient );
+
+        if (user_credentials_database_.checkIfUserWithLoginExists ( recipient )) {
+            qDebug() << "User with this login \"" << recipient << "\" doesn't exist";
+            sendToClient( clientSocket, Server_Code::recipient_not_registered, { { "message", "Message wasn't forwarded to recipient, because User with this login + recipient + doesn't exist" } } );
+        }
+
         if ( recipient_socket )
         {
             forwardMessageToRecipient( recipient, recipient_socket, decrypt_object );

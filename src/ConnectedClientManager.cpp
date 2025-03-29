@@ -23,26 +23,19 @@ bool ConnectedClientManager::saveUserName( const QString& login, QTcpSocket *soc
 QTcpSocket* ConnectedClientManager::getSocketIfUserIsAuthorized( const QString& login )
 {
     std::lock_guard< std::mutex > lock( mutex_ );
-    QTcpSocket *recipient_socket = nullptr;
+    auto it = std::find_if(clients_.begin(), clients_.end(),
+                           [&login](const auto &pair) { return pair.login == login; });
 
-    for ( QMap<QTcpSocket*, ClientsSessionsInfo>::iterator it = clients_.begin(); it != clients_.end(); ++it )
-    {
-        if (it.value().login == login)
-        {
-            recipient_socket = it.key();
-            break;
-        }
-    }
-    return recipient_socket;
+    return (it != clients_.end()) ? it.key() : nullptr;
 }
 
-int ConnectedClientManager::getNumberConnectedClients()
+int ConnectedClientManager::getNumberConnectedClients() const
 {
     std::lock_guard< std::mutex > lock( mutex_ );
     return clients_.count();
 }
 
-QList < QTcpSocket* > ConnectedClientManager::getClientSocketsList()
+QList < QTcpSocket* > ConnectedClientManager::getClientSocketsList() const
 {
     std::lock_guard< std::mutex > lock( mutex_ );
     return clients_.keys();
@@ -54,7 +47,7 @@ void ConnectedClientManager::clearClients()
     if ( !clients_.isEmpty() ) {
         for ( auto it = clients_.begin(); it != clients_.end(); ++it )
         {
-            delete it.key();
+            it.key()->deleteLater();
         }
         clients_.clear();
     }
@@ -78,43 +71,40 @@ void ConnectedClientManager::calculateAndSaveClientSessionKey( int number_from_c
     }
 }
 
-std::optional< int > ConnectedClientManager::getClientIntermediateNumber( QTcpSocket *socket )
+std::optional< int > ConnectedClientManager::getClientIntermediateNumber( QTcpSocket *socket ) const
 {
     std::lock_guard< std::mutex > lock( mutex_ );
-    if ( clients_.contains( socket ) )
+    auto it = clients_.find(socket);
+    if (it != clients_.end())
     {
-        return clients_[socket].session_key_object.getIntermediateNumberForClient();
+        return it.value().session_key_object.getIntermediateNumberForClient();
     }
-    else
-    {
-        return std::nullopt;
-    }
+    return std::nullopt;
 }
 
-int ConnectedClientManager::getUserSessionKey( QTcpSocket *socket )
+int ConnectedClientManager::getUserSessionKey( QTcpSocket *socket ) const
 {
     std::lock_guard< std::mutex > lock( mutex_ );
-    if ( clients_.contains( socket ) )
+    auto it = clients_.constFind(socket);
+    if (it != clients_.cend())
     {
+        qDebug() << __FILE__ << __LINE__ << " user_info.login: " << it->login;
         auto user_info = clients_[socket];
-        qDebug() << __FILE__ << __LINE__ << " user_info.login: " << user_info.login;
+        return it->session_key_object.getSessionKey();
+    }
 
-        return user_info.session_key_object.getSessionKey();
-    }
-    else
-    {
-        qDebug() << __FILE__ << __LINE__ << " Error getting SessionKey ";
-        return -1;
-    }
+    qDebug() << __FILE__ << __LINE__ << " Error: the socket not found";
+    return -1;
 }
 
 void ConnectedClientManager::removeUser( QTcpSocket *disconnected_user_socket )
 {
     std::lock_guard< std::mutex > lock( mutex_ );
-    if (clients_.contains( disconnected_user_socket ))
+    if (clients_.remove( disconnected_user_socket ))
     {
         qDebug() << __FILE__ << __LINE__  << "remove user";
-        clients_.remove( disconnected_user_socket );
+        disconnected_user_socket->close();
+        disconnected_user_socket->deleteLater();
     }
     else
     {

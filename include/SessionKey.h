@@ -9,9 +9,9 @@ class SessionKey
 {
 public:
     SessionKey();
-    int getIntermediateNumberForClient();
+    int getIntermediateNumberForClient() const;
     void calculateSessionKey( const int& intermediate_number_from_client );
-    int getSessionKey();
+    int getSessionKey() const;
 
 private:
     int randRange( int low,int high );

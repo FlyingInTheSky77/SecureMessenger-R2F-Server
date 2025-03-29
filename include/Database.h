@@ -39,8 +39,8 @@ public:
 
     std::optional< QJsonObject >  getActivityStatusAllUsers();
     bool setActivityStatusAllUsersToFalse();
+    bool checkIfUserWithLoginExists( const QString &login );
 
 private:
-    bool checkIfUserWithLoginExists( const QString &login );
     int getCount();
 };

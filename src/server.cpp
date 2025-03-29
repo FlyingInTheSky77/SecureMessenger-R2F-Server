@@ -82,10 +82,12 @@ void Server::gotDisconnection()
 {
     QTcpSocket* disconnected_user_socket = static_cast< QTcpSocket* >( sender() );
 
-    messageProcessor_->processUserDisconnection(disconnected_user_socket);
-    disconnected_user_socket->destroyed();
+    if (disconnected_user_socket) {
+        messageProcessor_->processUserDisconnection(disconnected_user_socket);
+        disconnected_user_socket->deleteLater();
 
-    emit smbDisconnected_signal();
+        emit smbDisconnected_signal();
+    }
 }
 
 void Server::sendToClient( QTcpSocket *socket, const QByteArray jByte )

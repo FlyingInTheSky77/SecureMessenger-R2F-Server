@@ -32,7 +32,7 @@ void BackEnd::smbConnectedToServer()
 
 void BackEnd::smbDisconnectedFromServer()
 {    
-    qDebug() << "somebody connected";
+    qDebug() << "somebody disconnected";
     qDebug() << serverManager_->showServerStatus();
 }
 

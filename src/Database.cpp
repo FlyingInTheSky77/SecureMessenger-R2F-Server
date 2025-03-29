@@ -1,5 +1,5 @@
 #include "Database.h"
-
+#include <QDebug>
 #include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
@@ -145,9 +145,11 @@ Identification_request Database::authorization(const QString &login, const QStri
     }
     else
     {
-        authorization_result.message = tr( "Passwords did not match, user is not logged in" );
+        authorization_result.message = tr( "Passwords did not match" );
         authorization_result.is_request_granted = false;
     }
+    qDebug() << "authorization_result.message = " << authorization_result.message;
+    qDebug() << "authorization_result.is_request_granted = " << authorization_result.is_request_granted;
     return authorization_result;
 }
 
