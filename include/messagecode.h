@@ -12,7 +12,9 @@ enum class Server_Code
 
     message_to_recipient,
     contacts_list,
-    recipient_offline,    
+
+    recipient_offline,
+    recipient_not_registered,
 
     secure_session_server_step,
 

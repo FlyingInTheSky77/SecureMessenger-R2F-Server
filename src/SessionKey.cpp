@@ -33,12 +33,12 @@ void SessionKey::calculateSessionKey( const int& intermediate_number_from_client
     session_key_ = m_session_key_in_QString.toInt();
 }
 
-int SessionKey::getIntermediateNumberForClient()
+int SessionKey::getIntermediateNumberForClient() const
 {
     return intermediate_number_;
 }
 
-int SessionKey::getSessionKey()
+int SessionKey::getSessionKey() const
 {
     return session_key_;
 }
