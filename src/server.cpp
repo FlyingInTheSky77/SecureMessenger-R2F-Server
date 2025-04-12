@@ -42,9 +42,11 @@ void Server::disconnectSockets()
 QString Server::start()
 {
     QString start_server_result;
+    const uint port = 5555;
     if ( !tcpServer_->listen( QHostAddress::Any, 5555 ) )
     {
         start_server_result = tr( "Error: port is taken by some other service" );
+        qDebug() << "Error: Port" << port << "is already in use. Error: " << tcpServer_->errorString();
     }
     else
     {
@@ -83,7 +85,7 @@ void Server::gotDisconnection()
     QTcpSocket* disconnected_user_socket = static_cast< QTcpSocket* >( sender() );
 
     if (disconnected_user_socket) {
-        messageProcessor_->processUserDisconnection(disconnected_user_socket);
+        messageProcessor_->processUserDisconnection( disconnected_user_socket );
         disconnected_user_socket->deleteLater();
 
         emit smbDisconnected_signal();
