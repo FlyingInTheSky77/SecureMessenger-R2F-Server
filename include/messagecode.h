@@ -21,7 +21,9 @@ enum class Server_Code
     mistake,
     technical_errors_on_server,
 
-    changes_in_contact_list
+    registred_new_user,
+    user_online,
+    user_offline
 };
 
 enum class Client_Code

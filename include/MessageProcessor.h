@@ -46,11 +46,11 @@ private:
     void sendToClient( QTcpSocket *socket, const Server_Code cur_code, QJsonObject received_object = {});
 
     void sendToClientContactList( QTcpSocket *socket );
-    void sendClientActivityUpdateToAllClients( const QJsonObject& changes, const QTcpSocket *ignored_socket );
+    void sendContactUpdateToClients( const Server_Code cur_code, const QJsonObject& changes, const QTcpSocket *ignored_socket );
 
     // is user online
     QTcpSocket* getSocketIfUserIsAuthorized( const QString& login );
-    bool setClientActivityStatus( const QString& login, bool status );
+    bool setClientActivityStatus( const QString& login, const QString& status );
 
     void calculateAndSaveClientSessionKey( int number_from_client, QTcpSocket *socket );
     bool saveUserName( const QString& login, QTcpSocket *ClientSocket );

@@ -139,7 +139,7 @@ Identification_request Database::authorization(const QString &login, const QStri
     }
     if ( query.value( 0 ).toString() == password )
     {
-        setActivityStatus( login, true);
+        setActivityStatus( login, "online");
         authorization_result.message = tr( "User is successfully authorized" );
         authorization_result.is_request_granted = true;
     }
@@ -153,7 +153,7 @@ Identification_request Database::authorization(const QString &login, const QStri
     return authorization_result;
 }
 
-bool Database::setActivityStatus( const QString& user, bool status )
+bool Database::setActivityStatus( const QString& user, const QString& status )
 {
     QSqlQuery query;
     query.prepare("UPDATE users SET activitystatus = :activitystatus WHERE login = :user ");
@@ -171,7 +171,7 @@ bool Database::setActivityStatusAllUsersToFalse()
 {
     QSqlQuery query;
     query.prepare( "UPDATE users SET activitystatus = :activitystatus" );
-    query.bindValue( ":activitystatus", false );
+    query.bindValue( ":activitystatus", "offline" );
     if ( !query.exec() )
     {
         qDebug() << __FILE__ << __LINE__ << "Error QSqlQuery: error set activity status all users to false because the server has shut down";
@@ -180,7 +180,7 @@ bool Database::setActivityStatusAllUsersToFalse()
     return true;
 }
 
-std::optional< bool> Database::getActivityStatus( const QString& user )
+std::optional< QString> Database::getActivityStatus( const QString& user )
 {
     QSqlQuery query;
     query.prepare("SELECT users.login, users.activitystatus FROM users "
@@ -190,7 +190,7 @@ std::optional< bool> Database::getActivityStatus( const QString& user )
 
     while (query.next())
     {
-        bool status = query.value(1).toBool();
+        QString status = query.value(1).toString();
         return status;
     }
 
@@ -204,7 +204,6 @@ std::optional< bool> Database::getActivityStatus( const QString& user )
     }
 
     return std::nullopt;
-
 }
 
 std::optional< QJsonObject > Database::getActivityStatusAllUsers()

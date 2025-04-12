@@ -47,6 +47,11 @@ void MessageProcessor::processIncomingMessages( const QJsonObject& obj, QTcpSock
 
 void MessageProcessor::processUserDisconnection( QTcpSocket* disconnected_user_socket )
 {
+    const Server_Code code = Server_Code::user_offline;
+    auto disconnectedUserLogin = connected_client_manager_.getUserLogin( disconnected_user_socket );
+    const QJsonObject userInfo{{"login", disconnectedUserLogin},{"activityStatus","offline"}};
+    sendContactUpdateToClients( code, userInfo , disconnected_user_socket );
+    setClientActivityStatus( disconnectedUserLogin, "offline" );
     connected_client_manager_.removeUser( disconnected_user_socket );
 }
 
@@ -67,7 +72,7 @@ int MessageProcessor::getNumberConnectedClients()
     return connected_client_manager_.getNumberConnectedClients();
 }
 
-bool MessageProcessor::setClientActivityStatus( const QString& login, bool status )
+bool MessageProcessor::setClientActivityStatus( const QString& login, const QString& status )
 {
     if ( user_credentials_database_.setActivityStatus( login, status ) )
     {
@@ -128,10 +133,10 @@ void MessageProcessor::registrationRequest( const QJsonObject& obj, QTcpSocket* 
         if ( saveUserName( login, clientSocket ) )
         {
             code = Server_Code::registration_successful;
-            QJsonObject login_and_status_one_user{{"login", login},{"activityStatus","true"}};
+            const QJsonObject userInfo{{"login", login},{"activityStatus","online"}};
             qDebug() << __FILE__ << __LINE__ << "registration_successful";
 
-            sendClientActivityUpdateToAllClients( login_and_status_one_user, clientSocket );
+            sendContactUpdateToClients( Server_Code::registred_new_user, userInfo, clientSocket );
         }
         else
         {
@@ -166,9 +171,9 @@ void MessageProcessor::authorizationRequest( const QJsonObject& obj, QTcpSocket 
         if ( saveUserName( login, clientSocket ) )
         {
             code = Server_Code::authorization_successful;
-            QJsonObject login_and_status_one_user{ { "login", login },{ "activityStatus","true" } };
+            const QJsonObject userInfo{ { "login", login },{ "activityStatus","online" } };
 
-            sendClientActivityUpdateToAllClients( login_and_status_one_user, clientSocket );
+            sendContactUpdateToClients( Server_Code::user_online, userInfo, clientSocket );
         }
         else
         {
@@ -247,14 +252,15 @@ void MessageProcessor::sendToClientContactList( QTcpSocket *socket )
     qDebug() << __FILE__ << __LINE__ << "Error: contact list not received";
 }
 
-void MessageProcessor::sendClientActivityUpdateToAllClients( const QJsonObject& changes, const QTcpSocket *ignore_socket )
+void MessageProcessor::sendContactUpdateToClients( const Server_Code server_code, const QJsonObject& changes, const QTcpSocket *ignore_socket )
 {
     QList < QTcpSocket* > list_of_sockets = connected_client_manager_.getClientSocketsList();
     for ( auto& current_socket : list_of_sockets )
     {
         if ( current_socket != ignore_socket )
         {
-            sendToClient( current_socket, Server_Code::changes_in_contact_list, changes );
+
+            sendToClient( current_socket, server_code, changes );
         }
         else
         {
