@@ -87,8 +87,12 @@ target_include_directories(R2F-MessengerServer PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${GMP_INCLUDE_DIR}
 )
+
+find_package(Threads REQUIRED)
+
 target_link_libraries(R2F-MessengerServer PRIVATE
-   ${GMP_LIBRARY}
+    ${GMP_LIBRARY}
+    Threads::Threads
 )
 
 target_link_libraries(R2F-MessengerServer PRIVATE ${CMAKE_THREAD_LIBS_INIT})
